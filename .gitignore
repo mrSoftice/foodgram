@@ -111,7 +111,7 @@ celerybeat.pid
 .venv/
 .env/
 env/
-venv/
+venv*/
 ENV/
 env.bak/
 venv.bak/
@@ -140,3 +140,15 @@ dmypy.json
 
 static/
 media/
+
+frontend/node_modules
+
+# production
+/build
+
+# Others
+node_modules
+
+*.swp
+*.bak
+docker-compose.yml
