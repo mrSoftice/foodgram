@@ -17,6 +17,7 @@ DEBUG = getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split(',')
 
+AUTH_USER_MODEL = 'recipes.User'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -29,7 +30,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'djoser',
     'django_filters',
-    'api.apps.ApiConfig',
+    'recipes.apps.RecipesConfig',
 ]
 
 MIDDLEWARE = [
@@ -114,8 +115,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
-
+STATIC_URL = '/static/'
+STATIC_ROOT = '/collected_static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
