@@ -11,7 +11,7 @@ class User(AbstractUser):
         unique=True,
     )
     avatar = models.ImageField(
-        upload_to='users/images/', null=True, blank=True, default=None
+        upload_to='users/', null=True, blank=True, default=None
     )
 
     USERNAME_FIELD = 'email'
@@ -67,7 +67,7 @@ class Recipe(models.Model):
     text = models.TextField(verbose_name='Описание')
     tags = models.ManyToManyField(Tag)
     cooking_time = models.PositiveSmallIntegerField(
-        default=1, verbose_name='Время приготовления'
+        default=1, verbose_name='Время приготовления, мин'
     )
     ingredients = models.ManyToManyField(
         Ingredient, through='RecipeIngredient', verbose_name='Ингредиенты'
@@ -95,3 +95,12 @@ class RecipeIngredient(models.Model):
 
     class Meta:
         unique_together = ('recipe', 'ingredient')
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        default_related_name = 'favorites'
+        unique_together = ('user', 'recipe')

@@ -32,9 +32,17 @@ class RecipeAdmin(admin.ModelAdmin):
         'name',
         'author',
     )
-    inlines = (TagsInline,)
     search_fields = ('name__search', 'author')
     list_filter = ('tags',)
+
+    filter_horizontal = ('tags',)
+    readonly_fields = ('favorites_count',)
+    # inlines = (TagsInline,)
+    # exclude = ('tags',)
+
+    @admin.display(description='Количество в избранном')
+    def favorites_count(self, obj):
+        return obj.favorites.count()
 
 
 @admin.register(User)
