@@ -33,7 +33,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
     )
     inlines = (TagsInline,)
-    search_fields = ('name', 'author')
+    search_fields = ('name__search', 'author')
     list_filter = ('tags',)
 
 

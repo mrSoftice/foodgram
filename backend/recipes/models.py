@@ -56,6 +56,7 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         default_related_name = 'ingredients'
+        unique_together = ('name', 'measurement_unit')
 
 
 class Recipe(models.Model):
