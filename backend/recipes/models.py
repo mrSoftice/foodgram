@@ -91,14 +91,14 @@ class Recipe(models.Model):
     cooking_time = models.PositiveSmallIntegerField(
         default=1, verbose_name='Время приготовления, мин'
     )
-    ingredients = models.ManyToManyField(
-        Ingredient, through='RecipeIngredient', verbose_name='Ингредиенты'
-    )
     image = models.ImageField(
         upload_to='recipes/images/',
         null=True,
         default=None,
         verbose_name='Изображение',
+    )
+    pub_date = models.DateField(
+        auto_now_add=True, verbose_name='Дата публикации'
     )
 
     class Meta:
@@ -108,9 +108,11 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='ingredients'
+    )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.IntegerField()
+    amount = models.PositiveSmallIntegerField(verbose_name='Количество')
     measurement_unit = models.ForeignKey(
         MeasurementUnit, on_delete=models.CASCADE
     )
@@ -121,8 +123,39 @@ class RecipeIngredient(models.Model):
 
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='favorites'
+    )
 
     class Meta:
         default_related_name = 'favorites'
         unique_together = ('user', 'recipe')
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='shoppings'
+    )
+
+
+class Subscription(models.Model):
+    """
+    Подписка:
+        оbject.followings - на кого подписан пользователь
+        object.followers - кто подписан на пользователя
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='followings',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='followers',
+    )
+
+    class Meta:
+        unique_together = ('user', 'author')

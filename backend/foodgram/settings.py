@@ -134,7 +134,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 10,
 }
 
@@ -148,5 +148,6 @@ DJOSER = {
     },
 }
 
+USER_SELFINFO_PATH = 'me'
 USERNAME_ANTIPATTERN = r'[^\w.@+-]'
-FORBIDDEN_USERNAMES = ('me', 'admin')
+FORBIDDEN_USERNAMES = (USER_SELFINFO_PATH, 'admin')
