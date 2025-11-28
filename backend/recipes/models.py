@@ -2,13 +2,32 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 import recipes.constants as const
+from recipes.validators import username_validation
 
 
 class User(AbstractUser):
+    username = models.CharField(
+        'Логин',
+        max_length=const.USERNAME_MAX_LENGTH,
+        unique=True,
+        validators=[username_validation],
+    )
     email = models.EmailField(
         'Почта',
         max_length=const.EMAIL_MAX_LENGTH,
         unique=True,
+    )
+    first_name = models.CharField(
+        'Имя',
+        max_length=const.MAX_NAME_LENGTH,
+        blank=False,
+        null=False,
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=const.MAX_NAME_LENGTH,
+        blank=False,
+        null=False,
     )
     avatar = models.ImageField(
         upload_to='users/', null=True, blank=True, default=None
@@ -19,6 +38,9 @@ class User(AbstractUser):
 
     class Meta:
         default_related_name = 'authors'
+        ordering = ('username',)
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
 
 class MeasurementUnit(models.Model):
