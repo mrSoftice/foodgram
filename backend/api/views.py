@@ -28,6 +28,30 @@ class UserViewSet(ModelViewSet):
         return Response(serializer.data)
 
     @action(
+        methods=['POST'],
+        detail=False,
+        permission_classes=[IsAuthenticated],
+        url_path='set_password',
+    )
+    def set_password(self, request):
+        serializer = serializers.SetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(
+            serializer.validated_data['current_password']
+        ):
+            return Response(
+                {'current_password': ['Неверный текущий пароль.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response(
+            {'status': 'Пароль изменен'}, status=status.HTTP_204_NO_CONTENT
+        )
+
+    @action(
         methods=['PUT', 'DELETE'],
         detail=False,
         url_path=USER_SELFINFO_PATH + '/avatar',

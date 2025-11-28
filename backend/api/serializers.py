@@ -1,6 +1,7 @@
 import base64
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
@@ -69,6 +70,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def validate_username(self, username):
         return username_validation(username)
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
 
 
 class TagSerializer(serializers.ModelSerializer):
