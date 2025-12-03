@@ -3,10 +3,11 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api import serializers
 from foodgram.settings import USER_SELFINFO_PATH
+from recipes.models import Tag
 
 User = get_user_model()
 
@@ -73,3 +74,9 @@ class UserViewSet(ModelViewSet):
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None): ...
+
+
+class TagViewSet(ReadOnlyModelViewSet):
+    serializer_class = serializers.TagSerializer
+    queryset = Tag.objects.all()
+    pagination_class = None
