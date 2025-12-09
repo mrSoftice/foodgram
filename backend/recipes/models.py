@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 import recipes.constants as const
+from foodgram.settings import AVATAR_IMAGE_PATH, RECIPE_IMAGE_PATH
 from recipes.validators import username_validation
 
 
@@ -30,7 +31,7 @@ class User(AbstractUser):
         null=False,
     )
     avatar = models.ImageField(
-        upload_to='users/', null=True, blank=True, default=None
+        upload_to=AVATAR_IMAGE_PATH, null=True, blank=True, default=None
     )
 
     USERNAME_FIELD = 'email'
@@ -80,6 +81,9 @@ class Ingredient(models.Model):
         default_related_name = 'ingredients'
         unique_together = ('name', 'measurement_unit')
 
+    def __str__(self):
+        return f'{self.name} ({self.measurement_unit})'
+
 
 class Recipe(models.Model):
     author = models.ForeignKey(
@@ -88,11 +92,13 @@ class Recipe(models.Model):
     name = models.CharField(max_length=256, verbose_name='Название')
     text = models.TextField(verbose_name='Описание')
     tags = models.ManyToManyField(Tag)
+    ingredients = models.ManyToManyField(Ingredient, through='RecipeIngredient')
     cooking_time = models.PositiveSmallIntegerField(
         default=1, verbose_name='Время приготовления, мин'
     )
     image = models.ImageField(
-        upload_to='recipes/images/',
+        upload_to=RECIPE_IMAGE_PATH,
+        blank=True,
         null=True,
         default=None,
         verbose_name='Изображение',
@@ -109,7 +115,7 @@ class Recipe(models.Model):
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='ingredients'
+        Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients'
     )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(verbose_name='Количество')
