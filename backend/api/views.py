@@ -5,9 +5,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api import filters, serializers
+from api import filters, pagination, serializers
+from api.permissions import IsAuthorOrReadOnly
 from foodgram.settings import USER_SELFINFO_PATH
-from recipes.models import Ingredient, Tag
+from recipes.models import Ingredient, Recipe, Tag
 
 User = get_user_model()
 
@@ -88,3 +89,15 @@ class IngredientsViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     pagination_class = None
     filterset_class = filters.IngredientFilter
+
+
+class RecipesViewSet(ModelViewSet):
+    queryset = Recipe.objects.all()
+    pagination_class = pagination.PageLimitPagination
+    filterset_class = filters.RecipeFilter
+    permission_classes = (IsAuthorOrReadOnly,)
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return serializers.RecipeReadSerializer
+        return serializers.RecipeCreateSerializer
