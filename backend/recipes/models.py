@@ -3,7 +3,7 @@ from django.db import models
 
 import recipes.constants as const
 from foodgram.settings import AVATAR_IMAGE_PATH, RECIPE_IMAGE_PATH
-from recipes.validators import username_validation
+from recipes.validators import username_validation, validate_cooking_time
 
 
 class User(AbstractUser):
@@ -92,9 +92,16 @@ class Recipe(models.Model):
     name = models.CharField(max_length=256, verbose_name='Название')
     text = models.TextField(verbose_name='Описание')
     tags = models.ManyToManyField(Tag)
-    ingredients = models.ManyToManyField(Ingredient, through='RecipeIngredient')
+    ingredients = models.ManyToManyField(
+        Ingredient,
+        through='RecipeIngredient',
+    )
     cooking_time = models.PositiveSmallIntegerField(
-        default=1, verbose_name='Время приготовления, мин'
+        default=1,
+        verbose_name='Время приготовления, мин',
+        null=False,
+        blank=False,
+        validators=(validate_cooking_time,),
     )
     image = models.ImageField(
         upload_to=RECIPE_IMAGE_PATH,
@@ -124,7 +131,12 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
-        unique_together = ('recipe', 'ingredient')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_ingredient_in_recipe',
+            )
+        ]
 
 
 class Favorite(models.Model):
@@ -135,7 +147,12 @@ class Favorite(models.Model):
 
     class Meta:
         default_related_name = 'favorites'
-        unique_together = ('user', 'recipe')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_favorite_per_user_per_recipe',
+            )
+        ]
 
 
 class ShoppingCart(models.Model):
@@ -164,4 +181,9 @@ class Subscription(models.Model):
     )
 
     class Meta:
-        unique_together = ('user', 'author')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_subscription_per_user_per_author',
+            )
+        ]

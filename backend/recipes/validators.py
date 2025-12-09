@@ -16,3 +16,26 @@ def username_validation(username):
             {'username': USERNAME_NOT_ALLOWED.format(username)}
         )
     return username
+
+
+def validate_cooking_time(value):
+    if value < 1:
+        raise ValidationError(
+            'Время приготовления должно быть больше или равно 1 минуте.'
+        )
+    return value
+
+
+def list_is_not_empty(value, field_name=''):
+    if not value:
+        raise ValidationError(f'Поле "{field_name}" не должно быть пустым.')
+    return value
+
+
+def no_repeating_id_in_list(value, field_name=''):
+    list_ids = [item['id'] for item in value]
+    if len(list_ids) != len(set(list_ids)):
+        raise ValidationError(
+            f'Элементы в поле "{field_name}" не должны повторяться.'
+        )
+    return value

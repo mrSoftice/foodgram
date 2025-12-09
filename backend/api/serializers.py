@@ -5,6 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
+from recipes import validators
 from recipes.models import (
     Ingredient,
     Recipe,
@@ -168,8 +169,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     ingredients = RecipeIngredientWriteSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Tag.objects.all(),
+        many=True, queryset=Tag.objects.all()
     )
     image = Base64ImageField()
 
@@ -185,26 +185,15 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate_ingredients(self, value):
-        if not value:
-            raise serializers.ValidationError(
-                'Нужен хотя бы один ингредиент для рецепта.'
-            )
-        ingredient_ids = [item['id'] for item in value]
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                'Ингредиенты не должны повторяться.'
-            )
+        validators.list_is_not_empty(value, field_name='ингредиенты')
+        validators.no_repeating_id_in_list(value, field_name='ингредиенты')
+
         for ingredient in value:
             if int(ingredient['amount']) <= 0:
                 raise serializers.ValidationError(
                     'Количество ингредиентов должно быть больше нуля.'
                 )
-            # Проверка на существование ингредиента не делаю (пока),
-            # так как используется PrimaryKeyRelatedField
-            # if not Ingredient.objects.filter(id=ingredient['id']).exists():
-            #     raise serializers.ValidationError(
-            #         f'Ингредиента с id={ingredient["id"]} не существует.'
-            #     )
+        ingredient_ids = [ingredient['id'] for ingredient in value]
         existing_ids = set(
             Ingredient.objects.filter(id__in=ingredient_ids).values_list(
                 'id', flat=True
@@ -218,10 +207,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_tags(self, value):
-        if not value:
-            raise serializers.ValidationError(
-                'Нужен хотя бы один тег для рецепта.'
-            )
+        validators.list_is_not_empty(value, field_name='теги')
+        # if not value:
+        #     raise serializers.ValidationError(
+        #         'Нужен хотя бы один тег для рецепта.'
+        #     )
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError('Теги не должны повторяться.')
         return value
 
     def create_ingredients(self, ingredients, recipe):
@@ -248,9 +240,27 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         self.create_ingredients(ingredients, recipe)
         return recipe
 
+    def update(self, instance, validated_data):
+        ingredients = validated_data.pop('ingredients', None)
+        tags = validated_data.pop('tags', None)
+
+        if not (ingredients and tags):
+            field_name = 'Ингредиенты' if not ingredients else 'Теги'
+            raise serializers.ValidationError(
+                'Не указано обязательное поле "{}"'.format(field_name)
+            )
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.tags.set(tags, clear=True)
+        instance.recipe_ingredients.all().delete()
+        self.create_ingredients(ingredients, instance)
+
+        instance.save()
+        return instance
+
     def to_representation(self, instance):
         # import RecipeReadSerializer
-
         return RecipeReadSerializer(instance, context=self.context).data
 
 
