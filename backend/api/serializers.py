@@ -183,7 +183,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time',
         )
-        a
 
     def validate_ingredients(self, value):
         if not value:
