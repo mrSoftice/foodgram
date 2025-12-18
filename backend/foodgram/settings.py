@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = getenv('SECRET_KEY')
 
-DEBUG = getenv('DEBUG', 'False') == 'True'
+DEBUG = getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split(',')
 
@@ -31,10 +31,12 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'recipes.apps.RecipesConfig',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -136,6 +138,10 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 10,
+    'dEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
 }
 
 DJOSER = {
@@ -155,3 +161,6 @@ RECIPE_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 RECIPE_IMAGE_PATH = 'recipes/image'
 AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
+
+# Debug toolbar settings
+INTERNAL_IPS = ['127.0.0.1', 'localhost']
