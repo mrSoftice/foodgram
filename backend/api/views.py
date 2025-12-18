@@ -9,8 +9,19 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
-from foodgram.settings import USER_SELFINFO_PATH
+from foodgram.settings import (
+    SHOPPING_CART_FILENAME,
+    SHOPPING_CART_FORMAT,
+    USER_SELFINFO_PATH,
+)
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.services.shopping_cart import (
+    build_file_response,
+    get_shopping_cart_ingredients,
+    render_as_csv,
+    render_as_json,
+    render_as_txt,
+)
 
 User = get_user_model()
 
@@ -125,6 +136,60 @@ class RecipesViewSet(ModelViewSet):
     pagination_class = pagination.PageLimitPagination
     filterset_class = filters.RecipeFilter
     permission_classes = (IsAuthorOrReadOnly,)
+
+    @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
+    def favorite(self, request, pk=None):
+        return self._manage_recipe_relation(
+            request, pk, serializers.FavoriteSerializer, Favorite
+        )
+
+    @action(methods=['POST', 'DELETE'], detail=True, url_path='shopping_cart')
+    def shopping_cart(self, request, pk=None):
+        return self._manage_recipe_relation(
+            request, pk, serializers.ShoppingCartSerializer, ShoppingCart
+        )
+
+    @action(methods=['GET'], detail=False, url_path='download_shopping_cart')
+    def download_shopping_cart(self, request):
+        file_format = request.query_params.get('file_format', None)
+        if file_format is None:
+            file_format = SHOPPING_CART_FORMAT
+        data = get_shopping_cart_ingredients(request.user)
+        filename = f'{SHOPPING_CART_FILENAME}.{file_format}'
+        if file_format == 'csv':
+            file_content = render_as_csv(data)
+            content_type = 'text/csv'
+        elif file_format == 'json':
+            file_content = render_as_json(data)
+            content_type = 'aplication/json'
+        else:
+            file_content = render_as_txt(data)
+            content_type = 'text/plain'
+        return build_file_response(file_content, filename, content_type)
+
+    def _manage_recipe_relation(self, request, pk, serializer_class, model):
+        # pdb.set_trace()
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'POST':
+            write_serializer = serializer_class(
+                data={'user': request.user.id, 'recipe': recipe.id},
+                context={'request': request},
+            )
+            write_serializer.is_valid(raise_exception=True)
+            write_serializer.save()
+
+            read_serializer = serializers.RecipeForCartSerializer(
+                recipe, context={'request': request}
+            )
+            return Response(
+                read_serializer.data, status=status.HTTP_201_CREATED
+            )
+        else:
+            relation_instance = get_object_or_404(
+                model, user=request.user, recipe=recipe
+            )
+            relation_instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
         user = self.request.user

@@ -8,9 +8,11 @@ from rest_framework import serializers
 
 from recipes import validators
 from recipes.models import (
+    Favorite,
     Ingredient,
     Recipe,
     RecipeIngredient,
+    ShoppingCart,
     Subscription,
     Tag,
 )
@@ -138,6 +140,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(
         read_only=True, default=False
     )
+    image = serializers.ImageField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -265,6 +268,8 @@ class RecipeForCartSerializer(serializers.ModelSerializer):
     и добавлении в Список Покупок
     """
 
+    image = serializers.ImageField(read_only=True)
+
     class Meta:
         model = Recipe
         ordering = '-pub_date'
@@ -335,3 +340,33 @@ class SubscribtionWriteSerializer(serializers.ModelSerializer):
                 {'author': 'Нельзя подписаться на самого себя.'}
             )
         return author
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """Сериализатор для добавления и удаления рецепта в Избранное."""
+
+    class Meta:
+        model = Favorite
+        fields = ('user', 'recipe')
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('user', 'recipe'),
+                message='Рецепт уже есть в Избранном.',
+            ),
+        ]
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """Сериализатор для добавления и удаления рецепта в Список Покупок."""
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('user', 'recipe'),
+                message='Рецепт уже есть в Списке Покупок.',
+            ),
+        ]

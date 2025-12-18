@@ -123,8 +123,8 @@ STATIC_ROOT = '/collected_static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-MEDIA_ROOT = '/media'
+MEDIA_ROOT = Path.joinpath(BASE_DIR, 'media')
+# MEDIA_ROOT = '/media'
 
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
@@ -161,6 +161,8 @@ RECIPE_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 RECIPE_IMAGE_PATH = 'recipes/image'
 AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
+SHOPPING_CART_FILENAME = 'shopping_cart'
+SHOPPING_CART_FORMAT = 'txt'
 
 # Debug toolbar settings
 INTERNAL_IPS = ['127.0.0.1', 'localhost']
