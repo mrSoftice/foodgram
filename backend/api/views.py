@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Exists, OuterRef
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,7 +10,7 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
 from foodgram.settings import USER_SELFINFO_PATH
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 User = get_user_model()
 
@@ -60,21 +62,49 @@ class UserViewSet(ModelViewSet):
     )
     def avatar(self, request): ...
 
-    @action(methods=['GET'], detail=False)
-    def subscriptions(self, request): ...
-
-    @action(methods=['PUT'], detail=True)
-    def subscribe(self, request, id=None):
-        author = User.get_object_or_404(id=id)
-        subscription = serializers.CreateSubscriptionSerializer(
-            data={'author': author, 'user': request.user}
+    @action(
+        methods=['GET'],
+        detail=False,
+        permission_classes=[IsAuthenticated],
+        pagination_class=[pagination.PageLimitPagination],
+    )
+    def subscriptions(self, request):
+        serializer = serializers.SubscribtionReadSerializer(
+            User.objects.filter(followers__user=request.user),
+            many=True,
+            context={'request': request},
         )
-        subscription.is_valid(raise_exception=True)
-        subscription.save()
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=['POST', 'PUT'],
+        detail=True,
+        permission_classes=[IsAuthenticated],
+    )
+    def subscribe(self, request, id=None):
+        author = get_object_or_404(User, pk=id)
+
+        create_subscription = serializers.SubscribtionWriteSerializer(
+            data={'user': request.user.id, 'author': author.id},
+            context={'request': request},
+        )
+        create_subscription.is_valid(raise_exception=True)
+        create_subscription.save()
+
+        read_subscription = serializers.SubscribtionReadSerializer(
+            author, context={'request': request}
+        )
+
+        return Response(read_subscription.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
-    def unsubscribe(self, request, id=None): ...
+    def unsubscribe(self, request, id=None):
+        author = get_object_or_404(User, pk=id)
+        subscription = get_object_or_404(
+            request.user.subscriptions, author=author
+        )
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -92,10 +122,33 @@ class IngredientsViewSet(ReadOnlyModelViewSet):
 
 
 class RecipesViewSet(ModelViewSet):
-    queryset = Recipe.objects.all()
     pagination_class = pagination.PageLimitPagination
     filterset_class = filters.RecipeFilter
     permission_classes = (IsAuthorOrReadOnly,)
+
+    def get_queryset(self):
+        user = self.request.user
+        base_queryset = (
+            Recipe.objects.all()
+            .select_related('author')
+            .prefetch_related(
+                'tags',
+                'recipe_ingredients__ingredient__measurement_unit',
+                'recipe_ingredients__measurement_unit',
+            )
+        )
+        if user.is_authenticated:
+            return base_queryset.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user, recipe=OuterRef('pk'))
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        user=user, recipe=OuterRef('pk')
+                    )
+                ),
+            )
+        return base_queryset
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):

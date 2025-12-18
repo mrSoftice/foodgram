@@ -3,6 +3,7 @@ import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from recipes import validators
@@ -47,9 +48,11 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        return False
         user = self.context.get('request').user
-        return user.is_authenticated and (user.followings.count() > 0)
+        author = get_object_or_404(User, id=obj.id)
+        return user.is_authenticated and (
+            user.followings.filter(author=author).exists() > 0
+        )
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -131,8 +134,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     )
     tags = TagSerializer(many=True)
     author = UserSerializer(read_only=True)
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = serializers.BooleanField(
+        read_only=True, default=False
+    )
 
     class Meta:
         model = Recipe
@@ -147,20 +152,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
             'image',
             'text',
             'cooking_time',
-        )
-
-    def get_is_favorited(self, obj):
-        """Показывает что рецепт в Избранном."""
-        user = self.context.get('request').user
-        return (
-            user.is_authenticated and obj.favorites.filter(user=user).exists()
-        )
-
-    def get_is_in_shopping_cart(self, obj):
-        """Показывает что  рецепт в Списке Покупок."""
-        user = self.context.get('request').user
-        return (
-            user.is_authenticated and obj.shoppings.filter(user=user).exists()
         )
 
 
@@ -215,6 +206,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         if len(value) != len(set(value)):
             raise serializers.ValidationError('Теги не должны повторяться.')
         return value
+
+    def validate_cooking_time(self, value):
+        return validators.validate_cooking_time(value)
 
     def create_ingredients(self, ingredients, recipe):
         recipe_ingredients = []
@@ -277,23 +271,52 @@ class RecipeForCartSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class SubscribtionSerializer(serializers.ModelSerializer):
-    author = UserSerializer(
-        read_only=True,
-        # queryset=User.objects.all(),
-    )
-    recipes = RecipeForCartSerializer(
-        read_only=True,
-        many=True,
-        # queryset=Recipe.objects.all()
-    )
+class SubscribtionReadSerializer(serializers.ModelSerializer):
+    """Сериализатор для отображения подписок пользователя.
+    Возвращает информацию об авторах и их рецептах
+    на которых подписан текущий пользователь.
+    """
+
+    is_subscribed = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
 
     class Meta:
-        model = Subscription
-        fields = ('author', 'recipes')
+        model = User
+        fields = (
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'is_subscribed',
+            'avatar',
+            'recipes_count',
+            'recipes',
+        )
+
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
+        return (
+            user.is_authenticated
+            and user.followings.filter(author=obj).exists()
+        )
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes_limit = request.query_params.get('recipes_limit')
+        recipes = obj.recipes.all()
+        if recipes_limit is not None and recipes_limit.isdigit():
+            recipes = recipes[: int(recipes_limit)]
+        return RecipeForCartSerializer(recipes, many=True).data
 
 
-class CreateSubscriptionSerializer(serializers.ModelSerializer):
+class SubscribtionWriteSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания и удаления подписок пользователя."""
+
     class Meta:
         model = Subscription
         fields = ('user', 'author')
@@ -302,5 +325,13 @@ class CreateSubscriptionSerializer(serializers.ModelSerializer):
                 queryset=Subscription.objects.all(),
                 fields=('user', 'author'),
                 message='Вы уже подписаны на этого пользователя.',
-            )
+            ),
         ]
+
+    def validate_author(self, author):
+        user = self.context['request'].user
+        if user == author:
+            raise serializers.ValidationError(
+                {'author': 'Нельзя подписаться на самого себя.'}
+            )
+        return author
