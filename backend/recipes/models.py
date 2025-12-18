@@ -165,14 +165,14 @@ class ShoppingCart(models.Model):
 class Subscription(models.Model):
     """
     Подписка:
-        оbject.followings - на кого подписан пользователь
+        оbject.subscriptions - на кого подписан пользователь
         object.followers - кто подписан на пользователя
     """
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followings',
+        related_name='subscriptions',
     )
     author = models.ForeignKey(
         User,
@@ -181,9 +181,15 @@ class Subscription(models.Model):
     )
 
     class Meta:
+        # В новых версиях Django в конструкторе CheckConstraint
+        # нужно использовать параметр condition вместо check
         constraints = [
+            models.CheckConstraint(
+                check=~models.Q(user=models.F('author')),
+                name='prevent_self_subscription',
+            ),
             models.UniqueConstraint(
                 fields=['user', 'author'],
                 name='unique_subscription_per_user_per_author',
-            )
+            ),
         ]

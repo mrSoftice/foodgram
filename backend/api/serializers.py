@@ -51,7 +51,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         author = get_object_or_404(User, id=obj.id)
         return user.is_authenticated and (
-            user.followings.filter(author=author).exists() > 0
+            user.subscriptions.filter(author=author).exists() > 0
         )
 
 
@@ -299,7 +299,7 @@ class SubscribtionReadSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         return (
             user.is_authenticated
-            and user.followings.filter(author=obj).exists()
+            and user.subscriptions.filter(author=obj).exists()
         )
 
     def get_recipes_count(self, obj):
