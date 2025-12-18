@@ -27,14 +27,28 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit')
     search_fields = ('name',)
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('measurement_unit')
+
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
+    autocomplete_fields = ('ingredient',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related(
+            'ingredient__measurement_unit', 'measurement_unit'
+        )
 
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
+    list_select_related = [
+        'author',
+    ]
     list_display = (
         'name',
         'author',
@@ -47,9 +61,13 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = (RecipeIngredientInline,)
     # exclude = ('tags',)
 
-    @admin.display(description='Количество в избранном')
+    @admin.display(description='?????????? ? ?????????')
     def favorites_count(self, obj):
         return obj.favorites.count()
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('tags')
 
 
 @admin.register(User)
