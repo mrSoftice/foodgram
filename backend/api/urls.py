@@ -16,7 +16,6 @@ v1_router.register(r'recipes', RecipesViewSet, basename='recipes')
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    #    path('', include('djoser.urls')),
 ]
 
 # переопределяем пути djoser
