@@ -1,4 +1,10 @@
-from django_filters.rest_framework import BaseInFilter, CharFilter, FilterSet
+from django_filters import NumberFilter
+from django_filters.rest_framework import (
+    BaseInFilter,
+    CharFilter,
+    FilterSet,
+    NumberFilter,
+)
 
 from recipes.models import Ingredient, Recipe
 
@@ -11,9 +17,27 @@ class IngredientFilter(FilterSet):
         fields = ('name',)
 
 
-class RecipeFilter(FilterSet):
+class RecipeFilters(FilterSet):
     tags = BaseInFilter(field_name='tags__slug', lookup_expr='in')
     author = CharFilter(field_name='author__id', lookup_expr='exact')
+    is_in_shopping_cart = NumberFilter(method='filter_is_in_shopping_cart')
+    is_favorited = NumberFilter(method='filter_is_favorited')
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        user = self.request.user
+        if user.is_anonymous:
+            return queryset.none() if value == 1 else queryset
+        if value == 1:
+            return queryset.filter(shoppingcart__user=user)
+        return queryset.exclude(shoppingcart__user=user)
+
+    def filter_is_favorited(self, queryset, name, value):
+        user = self.request.user
+        if user.is_anonymous:
+            return queryset.none() if value == 1 else queryset
+        if value == 1:
+            return queryset.filter(favorites__user=user)
+        return queryset.exclude(favorites__user=user)
 
     class Meta:
         model = Recipe

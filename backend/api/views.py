@@ -134,7 +134,7 @@ class IngredientsViewSet(ReadOnlyModelViewSet):
 
 class RecipesViewSet(ModelViewSet):
     pagination_class = pagination.PageLimitPagination
-    filterset_class = filters.RecipeFilter
+    filterset_class = filters.RecipeFilters
     permission_classes = (IsAuthorOrReadOnly,)
 
     @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
