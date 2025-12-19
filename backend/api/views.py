@@ -230,6 +230,11 @@ class RecipesViewSet(ModelViewSet):
 
     def _manage_recipe_relation(self, request, pk, serializer_class, model):
         # pdb.set_trace()
+        if request.user.is_anonymous:
+            return Response(
+                {'errors': 'Авторизуйтесь для выполнения данного действия.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'POST':
             write_serializer = serializer_class(
