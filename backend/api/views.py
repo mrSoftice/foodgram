@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef
+from django.db.models import BooleanField, Exists, OuterRef, Prefetch, Value
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import action
@@ -14,7 +14,14 @@ from foodgram.settings import (
     SHOPPING_CART_FORMAT,
     USER_SELFINFO_PATH,
 )
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    ShoppingCart,
+    Subscription,
+    Tag,
+)
 from recipes.services.shopping_cart import (
     build_file_response,
     get_shopping_cart_ingredients,
@@ -27,19 +34,44 @@ User = get_user_model()
 
 
 class UserViewSet(ModelViewSet):
-    serializer_class = serializers.UserSerializer
-    queryset = User.objects.all()
     lookup_field = 'id'
     permission_classes = (AllowAny,)
+    pagination_class = pagination.PageLimitPagination
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve', 'create'):
             return (AllowAny(),)
         return (IsAuthenticated(),)
 
+    def get_queryset(self):
+        queryset = User.objects.all()
+
+        user = self.request.user
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                is_subscribed=Exists(
+                    Subscription.objects.filter(
+                        user=user, author=OuterRef('pk')
+                    )
+                )
+            )
+        else:
+            queryset = queryset.annotate(
+                is_subscribed=Value(False, output_field=BooleanField())
+            )
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return serializers.UserCreateSerializer
+        return serializers.UserSerializer
+
     @action(methods=['GET'], detail=False, url_path=USER_SELFINFO_PATH)
     def me(self, request):
-        serializer = serializers.UserSerializer(request.user)
+        serializer = serializers.UserSerializer(
+            self.get_queryset().get(pk=request.user.pk),
+            context={'request': request},
+        )
         return Response(serializer.data)
 
     @action(
@@ -70,22 +102,37 @@ class UserViewSet(ModelViewSet):
         methods=['PUT', 'DELETE'],
         detail=False,
         url_path=USER_SELFINFO_PATH + '/avatar',
+        permission_classes=[IsAuthenticated],
     )
-    def avatar(self, request): ...
+    def avatar(self, request):
+        user = request.user
+        if request.method == 'PUT':
+            serializer = serializers.UserAvatarSerializer(
+                user, data=request.data, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        if user.avatar:
+            user.avatar.delete(save=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['GET'],
         detail=False,
         permission_classes=[IsAuthenticated],
-        pagination_class=[pagination.PageLimitPagination],
     )
     def subscriptions(self, request):
+        page = self.paginate_queryset(
+            User.objects.filter(followers__user=request.user)
+        )
         serializer = serializers.SubscribtionReadSerializer(
-            User.objects.filter(followers__user=request.user),
+            page,
             many=True,
             context={'request': request},
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self.get_paginated_response(serializer.data)
 
     @action(
         methods=['POST', 'PUT'],
@@ -111,9 +158,14 @@ class UserViewSet(ModelViewSet):
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None):
         author = get_object_or_404(User, pk=id)
-        subscription = get_object_or_404(
-            request.user.subscriptions, author=author
-        )
+        user = request.user
+        try:
+            subscription = user.subscriptions.get(author=author)
+        except Subscription.DoesNotExist:
+            return Response(
+                {'errors': 'Вы не подписаны на данного пользователя.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -185,22 +237,35 @@ class RecipesViewSet(ModelViewSet):
                 read_serializer.data, status=status.HTTP_201_CREATED
             )
         else:
-            relation_instance = get_object_or_404(
-                model, user=request.user, recipe=recipe
-            )
+            try:
+                relation_instance = model.objects.filter(
+                    user=request.user, recipe=recipe
+                ).get()
+            except model.DoesNotExist:
+                return Response(
+                    {'errors': 'Рецепт не найден в списке.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             relation_instance.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_queryset(self):
         user = self.request.user
-        base_queryset = (
-            Recipe.objects.all()
-            .select_related('author')
-            .prefetch_related(
-                'tags',
-                'recipe_ingredients__ingredient__measurement_unit',
-                'recipe_ingredients__measurement_unit',
+
+        author_queryset = User.objects.all()
+        if user.is_authenticated:
+            annotation = Exists(
+                Subscription.objects.filter(user=user, author=OuterRef('pk'))
             )
+        else:
+            annotation = Value(False, output_field=BooleanField())
+        author_queryset = author_queryset.annotate(is_subscribed=annotation)
+
+        base_queryset = Recipe.objects.all().prefetch_related(
+            Prefetch('author', queryset=author_queryset),
+            'tags',
+            'recipe_ingredients__ingredient__measurement_unit',
+            'recipe_ingredients__measurement_unit',
         )
         if user.is_authenticated:
             return base_queryset.annotate(

@@ -3,7 +3,6 @@ import base64
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.files.base import ContentFile
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from recipes import validators
@@ -35,7 +34,7 @@ class Base64ImageField(serializers.ImageField):
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для управления пользователями Администратором."""
 
-    is_subscribed = serializers.SerializerMethodField()
+    is_subscribed = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -47,13 +46,6 @@ class UserSerializer(serializers.ModelSerializer):
             'last_name',
             'is_subscribed',
             'avatar',
-        )
-
-    def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        author = get_object_or_404(User, id=obj.id)
-        return user.is_authenticated and (
-            user.subscriptions.filter(author=author).exists() > 0
         )
 
 
@@ -85,6 +77,16 @@ class SetPasswordSerializer(serializers.Serializer):
     def validate_new_password(self, value):
         validate_password(value)
         return value
+
+
+class UserAvatarSerializer(serializers.ModelSerializer):
+    """Сериализатор для обновления аватара пользователя."""
+
+    avatar = Base64ImageField()
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -257,8 +259,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        # import RecipeReadSerializer
-        return RecipeReadSerializer(instance, context=self.context).data
+        view = self.context.get('view')
+
+        recipe = view.get_queryset().get(pk=instance.pk)
+        return RecipeReadSerializer(recipe, context=self.context).data
 
 
 class RecipeForCartSerializer(serializers.ModelSerializer):
