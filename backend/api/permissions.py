@@ -2,28 +2,29 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorOrReadOnly(BasePermission):
-    """Allow read-only access to anyone, but modifications only to the author.
+    """Доступ на Чтение для всех, Изменение доступно только авторам.
 
-    - SAFE_METHODS (GET, HEAD, OPTIONS) are allowed for any request.
-    - POST is allowed for authenticated users (so they can create recipes).
-    - PUT/PATCH/DELETE are allowed only if the request user is the object's author.
+    - SAFE_METHODS (GET, HEAD, OPTIONS) разрешены для всех запросов.
+    - POST разрешены только аутентифицированным пользователям (только они могут создать реепты).
+    - PUT/PATCH/DELETE разрешены только авторам рецептов.
     """
 
     def has_permission(self, request, view):
-        # Allow anyone to list/retrieve (safe methods)
+        # list/retrieve (safe methods) доступны всем
         if request.method in SAFE_METHODS:
             return True
-        # Allow authenticated users to create
+        # создание и удаление (POST, DELETE) доступно только аутентифицированным пользователям
         if request.method == 'POST':
             return request.user and request.user.is_authenticated
-        # For other methods (PUT, PATCH, DELETE) we defer to has_object_permission
+        # остальные методы (PUT, PATCH, DELETE) мы передаем в has_object_permission
         return True
 
     def has_object_permission(self, request, view, obj):
         # Safe methods already allowed in has_permission
         if request.method in SAFE_METHODS:
             return True
-        # For modifications, require object has 'author' and that it's the request user
+        # Для изменения, требуется что бы объект имел роле автор
+        # и он должен совпадать с request user
         author = getattr(obj, 'author', None)
         if author is None:
             return False

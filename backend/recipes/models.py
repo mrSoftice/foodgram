@@ -91,13 +91,12 @@ class Recipe(models.Model):
     )
     name = models.CharField(max_length=256, verbose_name='Название')
     text = models.TextField(verbose_name='Описание')
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(Tag, verbose_name='Теги')
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
     )
     cooking_time = models.PositiveSmallIntegerField(
-        default=1,
         verbose_name='Время приготовления, мин',
         null=False,
         blank=False,

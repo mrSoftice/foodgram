@@ -1,4 +1,3 @@
-from django_filters import NumberFilter
 from django_filters.rest_framework import (
     BaseInFilter,
     CharFilter,
