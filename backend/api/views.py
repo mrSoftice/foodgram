@@ -29,6 +29,7 @@ from recipes.services.shopping_cart import (
     render_as_json,
     render_as_txt,
 )
+from recipes.services.short_links import get_short_link
 
 User = get_user_model()
 
@@ -188,6 +189,14 @@ class RecipesViewSet(ModelViewSet):
     pagination_class = pagination.PageLimitPagination
     filterset_class = filters.RecipeFilters
     permission_classes = (IsAuthorOrReadOnly,)
+
+    @action(methods=['GET'], detail=True, url_path='get-link')
+    def get_link(self, request, pk=None):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        short_link = get_short_link(recipe.id, request)
+
+        return Response({'short-link': short_link})
 
     @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
     def favorite(self, request, pk=None):
