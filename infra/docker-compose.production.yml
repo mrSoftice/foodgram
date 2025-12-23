@@ -1,0 +1,42 @@
+# version: '3.3'
+name: foodgram
+
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
+
+  db:
+    image: postgres:13.10
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    env_file: ../.env
+
+  backend:
+    image: softice01/foodgram_backend
+    env_file: ../.env
+    command: ../backend/start_backend.sh
+    volumes:
+      - static:/backend_static
+      - media:/media
+    depends_on:
+      - db
+  frontend:
+    image: softice01/foodgram-front
+    env_file: ../.env
+    command: cp -r /app/build/. /static/
+    volumes:
+      - static:/static
+  nginx:
+    image: softice01/foodgram-proxy
+    env_file: ../.env
+    ports:
+      - "80:80"
+    volumes:
+      - static:/staticfiles
+      - media:/media
+    depends_on:
+      - backend
+      - frontend
