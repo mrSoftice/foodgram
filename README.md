@@ -1,5 +1,8 @@
 # Проект Foodgram
 
+[![Foodgram Workflow](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml)
+
+
 ## Описание
 Проект «Фудграм» — это сайт, на котором пользователи будут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов. Зарегистрированным пользователям также будет доступен сервис «Список покупок». Он позволит создавать список продуктов, которые нужно купить для приготовления выбранных блюд.
 
@@ -50,11 +53,22 @@ python3 manage.py runserver
 Подробную информацию по всем функциям API можно получить после запуска проекта в формате **Redoc** по адресу [ReDoc](http://localhost:8000/redoc/) или из файла [project folder\docs\openapi-schema.yml](./docs/openapi-schema.yml)
 
 
-## Подкачка данных из csv-файлов
-Для загрузки готового списка ингредиентов:
+## Загрузка данных
+Для загрузки готового списка ингредиентов и единиц измерений:
 ```
-python manage.py load_ingredients_from_csv
+python manage.py load_ingredients --format=<file_format> --data-dir=<source directory>
 ```
+  --file_format формат файла загрузки 'json' или 'csv'. По-умолчанию json
+  --data-dir  каталог в котором лежат файлы с данными для загрузки. По-умолчанию ../data
+
+Для загрузки полного комплекта демо-данных (пользователи, единицы измеренияб теги, ингредиенты, рецепты):
+```
+python manage.py load_demo_data --data-dir=<source directory>
+```
+  --data-dir  каталог в котором лежат файлы с данными для загрузки. По-умолчанию ../data
+автоматически создаются пользователи:
+	user1@example.com ("password123")
+	user2@example.com ("password123")
 
 ## Примеры использования
 

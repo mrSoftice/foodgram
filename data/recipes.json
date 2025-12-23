@@ -1,0 +1,72 @@
+[
+  {
+    "author_email": "user1@example.com",
+    "name": "Омлет на молоке",
+    "text": "Быстрый омлет на завтрак.",
+    "cooking_time": 10,
+    "tags": ["breakfast"],
+    "ingredients": [
+      { "name": "яйца куриные", "measurement_unit": "г", "amount": 120 },
+      { "name": "молоко", "measurement_unit": "мл", "amount": 60 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 3 }
+    ]
+  },
+  {
+    "author_email": "user1@example.com",
+    "name": "Картофельное пюре",
+    "text": "Нежное пюре с молоком.",
+    "cooking_time": 30,
+    "tags": ["breakfast"],
+    "ingredients": [
+      { "name": "картофель", "measurement_unit": "г", "amount": 400 },
+      { "name": "молоко", "measurement_unit": "мл", "amount": 120 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 2 }
+    ]
+  },
+  {
+    "author_email": "user1@example.com",
+    "name": "Чай с сахаром",
+    "text": "Чёрный чай, слегка подслащённый.",
+    "cooking_time": 5,
+    "tags": ["drink"],
+    "ingredients": [
+      { "name": "чай черный", "measurement_unit": "г", "amount": 6 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 10 }
+    ]
+  },
+
+  {
+    "author_email": "user2@example.com",
+    "name": "Молочный напиток",
+    "text": "Молоко с сахаром (демо-напиток).",
+    "cooking_time": 5,
+    "tags": ["drink"],
+    "ingredients": [
+      { "name": "молоко", "measurement_unit": "мл", "amount": 250 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 15 }
+    ]
+  },
+  {
+    "author_email": "user2@example.com",
+    "name": "Десертный крем",
+    "text": "Простой десерт на молоке и яйцах.",
+    "cooking_time": 20,
+    "tags": ["dessert"],
+    "ingredients": [
+      { "name": "молоко", "measurement_unit": "мл", "amount": 300 },
+      { "name": "яйца куриные", "measurement_unit": "г", "amount": 120 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 30 }
+    ]
+  },
+  {
+    "author_email": "user2@example.com",
+    "name": "Сладкий чай",
+    "text": "Чай для подачи с десертом.",
+    "cooking_time": 5,
+    "tags": ["drink"],
+    "ingredients": [
+      { "name": "чай черный", "measurement_unit": "г", "amount": 6 },
+      { "name": "сахар", "measurement_unit": "г", "amount": 12 }
+    ]
+  }
+]

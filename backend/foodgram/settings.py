@@ -32,12 +32,13 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'recipes.apps.RecipesConfig',
-    'debug_toolbar',
 ]
+
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -45,6 +46,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG:
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'foodgram.urls'
 
@@ -67,6 +71,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 # DB_ENGINE может принимать значения sqlite, postgres
+# DB_HOST = 'localhost' if DEBUG else getenv('DB_HOST', 'localhost')
+
 if getenv('DB_ENGINE', 'postgres') == 'postgres':
     DATABASES = {
         'default': {
@@ -74,7 +80,7 @@ if getenv('DB_ENGINE', 'postgres') == 'postgres':
             'NAME': getenv('POSTGRES_DB', 'django'),
             'USER': getenv('POSTGRES_USER', 'django'),
             'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
-            'HOST': getenv('DB_HOST', 'localhost'),
+            'HOST': getenv('DB_HOST', 'db'),
             'PORT': getenv('DB_PORT', 5432),
         }
     }
@@ -119,18 +125,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/collected_static/'
+STATIC_ROOT = BASE_DIR / 'collected_static'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = Path.joinpath(BASE_DIR, 'media')
-# MEDIA_ROOT = '/media'
+# MEDIA_ROOT = Path.joinpath(BASE_DIR, 'media')
+MEDIA_ROOT = '/media'
+
 
 REST_FRAMEWORK = {
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    # ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],

@@ -1,10 +1,12 @@
 from django.contrib import admin
 
 from .models import (
+    Favorite,
     Ingredient,
     MeasurementUnit,
     Recipe,
     RecipeIngredient,
+    ShoppingCart,
     Tag,
     User,
 )
@@ -61,7 +63,7 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = (RecipeIngredientInline,)
     # exclude = ('tags',)
 
-    @admin.display(description='?????????? ? ?????????')
+    @admin.display(description='Количество в избранном')
     def favorites_count(self, obj):
         return obj.favorites.count()
 
@@ -77,3 +79,15 @@ class UserAdmin(admin.ModelAdmin):
         'username',
         'email',
     )
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+    search_fields = ('user__username', 'recipe__name')
