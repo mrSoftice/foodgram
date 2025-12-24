@@ -12,4 +12,4 @@ def short_recipe_redirect(request, code):
         raise Http404('Invalid short link')
 
     recipe = get_object_or_404(Recipe, id=recipe_id)
-    return redirect(f'/api/recipes/{recipe.id}')
+    return redirect(f'/recipes/{recipe.id}')
