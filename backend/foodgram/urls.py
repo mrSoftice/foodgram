@@ -5,9 +5,11 @@ from django.urls import include, path
 from foodgram import settings
 from recipes.views import short_recipe_redirect
 
+app_name = 'foodgram'
+
 urlpatterns = [
     path('api/', include('api.urls')),
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls, name='admin'),
     path('s/<str:code>/', short_recipe_redirect, name='short-recipe-link'),
 ]
 

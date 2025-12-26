@@ -71,8 +71,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 # DB_ENGINE может принимать значения sqlite, postgres
-# DB_HOST = 'localhost' if DEBUG else getenv('DB_HOST', 'localhost')
-
 if getenv('DB_ENGINE', 'postgres') == 'postgres':
     DATABASES = {
         'default': {
@@ -109,9 +107,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
 LANGUAGE_CODE = 'ru-ru'
 
 TIME_ZONE = 'Asia/Baku'
@@ -121,16 +116,12 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'collected_static'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
-# MEDIA_ROOT = Path.joinpath(BASE_DIR, 'media')
 MEDIA_ROOT = '/media'
 
 
@@ -175,5 +166,4 @@ BASE62_ALPHABET = (
     string.digits + string.ascii_lowercase + string.ascii_uppercase
 )
 
-# Debug toolbar settings
 INTERNAL_IPS = ['127.0.0.1', 'localhost']

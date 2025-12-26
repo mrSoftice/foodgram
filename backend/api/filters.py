@@ -12,7 +12,6 @@ class IngredientFilter(FilterSet):
 
 
 class RecipeFilters(FilterSet):
-    # tags = BaseInFilter(field_name='tags__slug', lookup_expr='in')
     tags = CharFilter(method='filter_tags')
     author = CharFilter(field_name='author__id', lookup_expr='exact')
     is_in_shopping_cart = NumberFilter(method='filter_is_in_shopping_cart')

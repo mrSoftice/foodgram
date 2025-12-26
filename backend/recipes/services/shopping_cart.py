@@ -10,7 +10,6 @@ def get_shopping_cart_ingredients(user):
         RecipeIngredient.objects.filter(recipe__shoppingcart__user=user)
         .values(
             name=F('ingredient__name'),
-            # 'ingredient__measurement_unit__name',
             measure_unit=F('measurement_unit__name'),
         )
         .annotate(total_amount=Sum('amount'))
@@ -41,7 +40,6 @@ def render_as_csv(data):
             [
                 item['name'],
                 item['total_amount'],
-                # f'{item["ingredient__measurement_unit__name"]}'
                 item['measure_unit'],
             ]
         )
@@ -56,7 +54,6 @@ def render_as_json(data):
         {
             'name': item['name'],
             'amount': item['total_amount'],
-            # 'measurement_unit': item['ingredient__measurement_unit__name'],
             'measurement_unit': item['measure_unit'],
         }
         for item in data

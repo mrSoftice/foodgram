@@ -62,7 +62,7 @@ class Command(BaseCommand):
 
 
 def load_units(filename):
-    # Загрузка единиц измерения из JSON-файла
+    """Загрузка единиц измерения из файла"""
     data = read_data_from_file(filename)
 
     created = 0

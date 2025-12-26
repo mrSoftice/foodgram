@@ -125,7 +125,6 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
 class RecipeIngredientWriteSerializer(serializers.Serializer):
     """Сериализатор для добавления ингредиентов в рецепт."""
 
-    # id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     id = serializers.IntegerField()
     amount = serializers.IntegerField(min_value=1)
 
@@ -204,10 +203,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def validate_tags(self, value):
         validators.list_is_not_empty(value, field_name='теги')
-        # if not value:
-        #     raise serializers.ValidationError(
-        #         'Нужен хотя бы один тег для рецепта.'
-        #     )
         if len(value) != len(set(value)):
             raise serializers.ValidationError('Теги не должны повторяться.')
         return value

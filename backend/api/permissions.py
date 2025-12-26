@@ -10,7 +10,6 @@ class IsAuthorOrReadOnly(BasePermission):
     """
 
     def has_permission(self, request, view):
-        # list/retrieve (safe methods) доступны всем
         if request.method in SAFE_METHODS:
             return True
         # создание и удаление (POST, DELETE) доступно только аутентифицированным пользователям
@@ -20,11 +19,8 @@ class IsAuthorOrReadOnly(BasePermission):
         return True
 
     def has_object_permission(self, request, view, obj):
-        # Safe methods already allowed in has_permission
         if request.method in SAFE_METHODS:
             return True
-        # Для изменения, требуется что бы объект имел роле автор
-        # и он должен совпадать с request user
         author = getattr(obj, 'author', None)
         if author is None:
             return False

@@ -103,6 +103,7 @@ class UserViewSet(ModelViewSet):
         methods=['PUT', 'DELETE'],
         detail=False,
         url_path=USER_SELFINFO_PATH + '/avatar',
+        url_name='avatar',
         permission_classes=[IsAuthenticated],
     )
     def avatar(self, request):
@@ -229,7 +230,6 @@ class RecipesViewSet(ModelViewSet):
         return build_file_response(file_content, filename, content_type)
 
     def _manage_recipe_relation(self, request, pk, serializer_class, model):
-        # pdb.set_trace()
         if request.user.is_anonymous:
             return Response(
                 {'errors': 'Авторизуйтесь для выполнения данного действия.'},
