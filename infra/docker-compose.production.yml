@@ -15,7 +15,7 @@ services:
     env_file: ../.env
 
   backend:
-    image: softice01/foodgram_backend
+    image: softice01/foodgram-backend
     env_file: ../.env
     command: ../backend/start_backend.sh
     volumes:
@@ -24,7 +24,7 @@ services:
     depends_on:
       - db
   frontend:
-    image: softice01/foodgram-front
+    image: softice01/foodgram-frontend
     env_file: ../.env
     command: cp -r /app/build/. /static/
     volumes:
