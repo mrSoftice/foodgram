@@ -21,7 +21,8 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Загрузка демо-данных из JSON: tags.json, ingredients.json, users.json, recipes.json.\n'
+    help = 'Загрузка демо-данных из JSON: '
+    'tags.json, ingredients.json, users.json, recipes.json.\n'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -77,7 +78,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Единицы измерения: создано {len(created)}, всего {MeasurementUnit.objects.count()}.'
+                f'Единицы измерения: создано {len(created)}, '
+                f'всего {MeasurementUnit.objects.count()}.'
             )
         )
 
@@ -101,7 +103,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Пользователи: создано {created}, всего {User.objects.count()}.'
+                f'Пользователи: создано {created}, всего {User.objects.count()}'
             )
         )
 
@@ -169,6 +171,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Ингредиенты: создано {len(created)}, всего {Ingredient.objects.count()}.'
+                f'Ингредиенты: создано {len(created)}, '
+                f'всего {Ingredient.objects.count()}'
             )
         )

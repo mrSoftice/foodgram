@@ -197,7 +197,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         missing_ids = set(ingredient_ids) - existing_ids
         if missing_ids:
             raise serializers.ValidationError(
-                f'Ингредиента(ов) с id={", ".join(map(str, missing_ids))} не существует.'
+                f'Ингредиента(ов) с id={", ".join(map(str, missing_ids))} '
+                'не существует.'
             )
         return value
 

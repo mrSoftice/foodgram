@@ -9,14 +9,17 @@ from recipes.services.utils import read_data_from_file
 class Command(BaseCommand):
     """
     Команда для загрузки ингредиентов из CSV-файла.
-    Проверка уникальности вручную по комбинации (name, measurement_unit), чтобы избежать ошибок ON CONFLICT в SQLite.
+    Проверка уникальности вручную по комбинации (name, measurement_unit),'
+    чтобы избежать ошибок ON CONFLICT в SQLite.
     bulk_create только для новых объектов, дубликаты пропускаются.
     Работает как с уже существующими MeasurementUnit, так и с новыми.
     """
 
     help = (
         'Load ingredients list from file. '
-        'Parameters: --data-dir (default: ../data) --format (csv or json, default: json)'
+        'Parameters: '
+        '  --data-dir (default: ../data) '
+        '  --format (csv or json, default: json)'
     )
 
     def add_arguments(self, parser):
@@ -49,14 +52,16 @@ class Command(BaseCommand):
         created_units = load_units(units_path)
         self.stdout.write(
             self.style.SUCCESS(
-                f'Загружено {len(created_units)} единиц измерения, всего {MeasurementUnit.objects.count()}.'
+                f'Загружено {len(created_units)} единиц измерения, '
+                f'всего {MeasurementUnit.objects.count()}.'
             )
         )
 
         created_ingredients = load_ingredients(ingredients_path)
         self.stdout.write(
             self.style.SUCCESS(
-                f'Загружено {len(created_ingredients)} ингредиентов, всего {Ingredient.objects.count()}.'
+                f'Загружено {len(created_ingredients)} ингредиентов, '
+                f'всего {Ingredient.objects.count()}.'
             )
         )
 
