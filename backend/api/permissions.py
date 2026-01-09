@@ -12,8 +12,8 @@ class IsAuthorOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        # создание и удаление (POST, DELETE) доступно только аутентифицированным
-        # пользователям
+        # создание и удаление (POST, DELETE)
+        # доступно только аутентифицированным пользователям
         if request.method == 'POST':
             return request.user and request.user.is_authenticated
         # остальные методы (PUT, PATCH, DELETE) мы передаем
