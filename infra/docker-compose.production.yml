@@ -33,7 +33,7 @@ services:
     image: softice01/foodgram-proxy
     env_file: .env
     ports:
-      - "80:80"
+      - "8000:80"
     volumes:
       - static:/staticfiles
       - media:/media
