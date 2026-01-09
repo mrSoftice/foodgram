@@ -28,7 +28,7 @@ services:
     env_file: .env
     command: cp -r /app/build/. /static/
     volumes:
-      - static:/static
+      - static:/staticfiles
   nginx:
     image: softice01/foodgram-proxy
     env_file: .env

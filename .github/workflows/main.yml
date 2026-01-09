@@ -202,7 +202,6 @@ jobs:
             sudo docker compose -f docker-compose.production.yml up -d
             sudo chmod +x collect_static_foodgram.sh
             bash collect_static_foodgram.sh
-          # sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
 
   send_message:
     runs-on: ubuntu-latest
