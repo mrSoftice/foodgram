@@ -179,6 +179,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "infra/docker-compose.production.yml"
           target: "foodgram"
+          strip_components: 1
       - name: Copy collect_static_foodgram.sh to remote server
         uses: appleboy/scp-action@master
         with:
@@ -188,6 +189,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "infra/collect_static_foodgram.sh"
           target: "foodgram"
+          strip_components: 1
       - name: Execute remote scripts to deploy
         uses: appleboy/ssh-action@master
         with:
