@@ -1,0 +1,216 @@
+
+name: Main Foodgram Workflow
+
+on: push
+jobs:
+  checkout-and-print-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+      - name: Print tree
+        run: tree .
+      - name: Upload workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace
+          path: ./
+  backend_tests:
+    needs: checkout-and-print-tree
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    services:
+      db:
+        image: postgres:13.10
+        env:
+          POSTGRES_USER: django_user
+          POSTGRES_PASSWORD: django_password
+          POSTGRES_DB: django_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools
+          pip install flake8==7.3.0 flake8-isort==6.1.2
+          pip install -r ./backend/requirements.txt
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 backend/ --count --show-source --statistics
+      - name : Test with django test
+        env:
+          POSTGRES_USER: django_user
+          POSTGRES_PASSWORD: django_password
+          POSTGRES_DB: django_db
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: |
+          cd backend/
+          # python manage.py test
+          pytest
+
+  build_backend_and_push_to_docker_hub:
+    name: Push backend Docker image to DockerHub
+    runs-on: ubuntu-latest
+    needs: backend_tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      # - name: Check out the repo
+        # Получение исходного кода из репозитория
+      #  uses: actions/checkout@v5
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-backend:latest
+
+  frontend_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up nodeJS
+      uses: actions/setup-node@v3
+      with:
+        node-version: 21
+
+    - name: Install dependencies
+      run: |
+        cd frontend/
+        npm ci
+
+    - name: Test frontend
+      run: |
+        cd frontend/
+        npm run test
+
+  build_frontend_and_push_to_docker_hub:
+    name: Push frontend Docker image to DockerHub
+    runs-on: ubuntu-latest
+    needs: frontend_tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-frontend:latest
+
+  build_gateway_and_push_to_docker_hub:
+    name: Push gateway Docker image to DockerHub
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./nginx/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-proxy:latest
+
+  deploy_backend_to_remote_server:
+    name: Deploy to remote server
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build_backend_and_push_to_docker_hub
+      - build_frontend_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+      - name: Copy docker-compose.production.yml to remote server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.production.yml"
+          target: "foodgram"
+      - name: Copy collect_static_foodgram.sh to remote server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "collect_static_foodgram.sh"
+          target: "foodgram"
+      - name: Execute remote scripts to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd foodgram
+            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml down
+            sudo docker compose -f docker-compose.production.yml up -d
+            sudo chmod +x collect_static_foodgram.sh
+            bash collect_static_foodgram.sh
+          # sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+
+  send_message:
+    runs-on: ubuntu-latest
+    needs: deploy_backend_to_remote_server
+    steps:
+    - name: send message to telegram
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.HOMEWORK_BOT_TOKEN }}
+        message: |
+          ${{ github.actor }} сделал коммит ${{ github.event.commits[0].message }} в репозиторий ${{ github.repository }}.
+          Workflow ${{ github.workflow }} успешно выполнен!

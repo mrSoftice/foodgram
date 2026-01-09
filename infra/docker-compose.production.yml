@@ -12,12 +12,12 @@ services:
     image: postgres:13.10
     volumes:
       - pg_data:/var/lib/postgresql/data
-    env_file: ../.env
+    env_file: .env
 
   backend:
     image: softice01/foodgram-backend
-    env_file: ../.env
-    command: ../backend/start_backend.sh
+    env_file: .env
+    command: ./backend/start_backend.sh
     volumes:
       - static:/backend_static
       - media:/media
@@ -25,13 +25,13 @@ services:
       - db
   frontend:
     image: softice01/foodgram-frontend
-    env_file: ../.env
+    env_file: .env
     command: cp -r /app/build/. /static/
     volumes:
       - static:/static
   nginx:
     image: softice01/foodgram-proxy
-    env_file: ../.env
+    env_file: .env
     ports:
       - "80:80"
     volumes:
