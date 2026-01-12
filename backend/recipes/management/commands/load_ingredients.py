@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = (
         'Load ingredients list from file. '
         'Parameters: '
-        '  --data-dir (default: ../data) '
+        '  --data-dir (default: ./data) '
         '  --format (csv or json, default: json)'
     )
 

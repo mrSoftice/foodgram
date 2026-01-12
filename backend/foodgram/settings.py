@@ -18,6 +18,11 @@ DEBUG = getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split(',')
 
+CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED', '').split(',')
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 AUTH_USER_MODEL = 'recipes.User'
 
 INSTALLED_APPS = [
