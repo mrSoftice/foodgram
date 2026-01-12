@@ -152,4 +152,3 @@ node_modules
 
 *.swp
 *.bak
-docker-compose.yml
