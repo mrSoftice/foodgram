@@ -27,8 +27,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--data-dir',
-            default='../data',
-            help='Каталог с JSON файлами (по умолчанию /data).',
+            default='./data',
+            help='Каталог с JSON файлами (по умолчанию ./data).',
         )
 
     def handle(self, *args, **options):
