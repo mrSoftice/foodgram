@@ -170,6 +170,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
+      - name: Debug list files
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type f -name "data" -o -name "collect_static_foodgram.sh"
       - name: Copy docker-compose.production.yml to remote server
         uses: appleboy/scp-action@master
         with:
