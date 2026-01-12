@@ -21,7 +21,7 @@ services:
     volumes:
       - static:/backend_static
       - media:/media
-      - foodgram/data:/app/data:ro
+      - ./data:/app/data:ro
     depends_on:
       - db
   frontend:
