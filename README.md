@@ -2,6 +2,8 @@
 
 [![Foodgram Workflow](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml)
 
+[Foodgram](https://softice.redirectme.net)
+
 ---
 ## 1. Описание
 Проект «Фудграм» — это сайт, на котором пользователи будут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов. Зарегистрированным пользователям также будет доступен сервис «Список покупок». Он позволит создавать список продуктов, которые нужно купить для приготовления выбранных блюд.
@@ -96,8 +98,8 @@ DB_PORT=5432
 
 Перед запуском необходимо склонировать проект:
 ```bash
-HTTPS: git clone https://github.com/DIABLik666/foodgram-project-react.git
-SSH: git clone git@github.com:DIABLik666/foodgram-project-react.git
+HTTPS: git clone https://github.com/mrSoftice/foodgram.git
+SSH: git clone git@github.com:mrSoftice/foodgram.git
 ```
 
 Cоздать и активировать виртуальное окружение:
@@ -174,7 +176,7 @@ docker-compose exec backend python manage.py load_demo_data --data-dir=<source d
 	Python 3
 	Django
 	Django Rest Framework
-    PostgreSQL
+  PostgreSQL
 	React
 	Docker
 

@@ -117,6 +117,10 @@ class Recipe(models.Model):
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         default_related_name = 'recipes'
+        ordering = ('-pub_date',)
+
+    def __str__(self):
+        return self.name
 
 
 class RecipeIngredient(models.Model):
@@ -130,6 +134,8 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Ингредиент в рецепте'
+        verbose_name_plural = 'Ингредиенты в рецептах'
         constraints = [
             models.UniqueConstraint(
                 fields=['recipe', 'ingredient'],
@@ -145,6 +151,7 @@ class Favorite(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Избранное'
         default_related_name = 'favorites'
         constraints = [
             models.UniqueConstraint(
@@ -152,6 +159,9 @@ class Favorite(models.Model):
                 name='unique_favorite_per_user_per_recipe',
             )
         ]
+
+    def __str__(self):
+        return f'{self.recipe.name} (для {self.user.username})'
 
 
 class ShoppingCart(models.Model):
@@ -161,6 +171,7 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Список покупок'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
@@ -188,6 +199,8 @@ class Subscription(models.Model):
     )
 
     class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
         # В новых версиях Django в конструкторе CheckConstraint
         # нужно использовать параметр condition вместо check
         constraints = [

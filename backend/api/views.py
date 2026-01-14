@@ -246,7 +246,6 @@ class RecipesViewSet(ModelViewSet):
                     relation_model=relation_model,
                 )
                 serializer = serializer_class(
-                    # data={'user': request.user.id, 'recipe': recipe.id},
                     recipe,
                     context={'request': request},
                 )

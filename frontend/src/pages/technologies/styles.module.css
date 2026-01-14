@@ -40,8 +40,52 @@
   margin: 0 0 16px;
 }
 
+.logoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+  align-items: center;
+}
+
+.logoCard {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoImg {
+  /* чтобы все влезло на один экран и сохранялись пропорции */
+  max-width: 180px;
+  width: 100%;
+  height: 90px;        /* единая высота для ряда */
+  object-fit: contain; /* сохраняет пропорции и вписывает */
+}
+
+.logoCaption {
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+}
+
 @media screen and (max-width: 950px) {
   .title {
     font-size: 34px;
+  }
+  .logoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .logoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .logoImg {
+    max-width: 220px;
+    height: 100px;
   }
 }
