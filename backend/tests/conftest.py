@@ -93,6 +93,7 @@ def ingredient_banana(unit):
 @pytest.mark.django_db
 def recipe1(author, unit, ingredient_apple, ingredient_banana):
     recipe1 = Recipe.objects.create(
+        id=1,
         author=author,
         name='Recipe 1',
         text='Text',
@@ -119,6 +120,7 @@ def recipe1(author, unit, ingredient_apple, ingredient_banana):
 @pytest.mark.django_db
 def recipe2(author, unit, ingredient_apple):
     recipe2 = Recipe.objects.create(
+        id=2,
         author=author,
         name='Recipe 2',
         text='Text',
@@ -145,6 +147,7 @@ def recipe2(author, unit, ingredient_apple):
 @pytest.mark.django_db
 def other_recipe(user, unit, ingredient_banana):
     other_recipe = Recipe.objects.create(
+        id=3,
         author=user,
         name='Recipe 3',
         text='Text',
@@ -190,13 +193,14 @@ def users_get_subscriptions_url():
     return reverse('users-subscriptions')
 
 
-def users_post_subscriptions_url(recipe1):
-    return reverse('users-subscriptions', args=[recipe1.id])
+@pytest.fixture
+def users_post_subscribe_url(user):
+    return reverse('users-subscribe', args=[user.id])
 
 
 @pytest.fixture
 def users_set_password_url():
-    return reverse('users-set_password')
+    return reverse('users-set-password')
 
 
 @pytest.fixture
@@ -220,5 +224,5 @@ def get_short_link_url(recipe1):
 
 
 @pytest.fixture
-def favorites_url():
-    return reverse('recipes-favorite')
+def favorites_url(recipe1):
+    return reverse('recipes-favorite', args=[recipe1.id])

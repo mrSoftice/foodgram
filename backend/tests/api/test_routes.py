@@ -12,11 +12,11 @@ USER_LIST_URL = lazy_fixture('users_list_url')
 USER_PROFILE_URL = lazy_fixture('users_profile_url')
 USER_PUT_AVATAR_URL = lazy_fixture('users_avatar_url')
 USER_GET_SUBSCRIPTION_URL = lazy_fixture('users_get_subscriptions_url')
-USER_POST_SUBSCRIPTION_URL = lazy_fixture('users_post_subscriptions_url')
+USER_POST_SUBSCRIBE_URL = lazy_fixture('users_post_subscribe_url')
 USER_POST_PASSWORD_URL = lazy_fixture('users_set_password_url')
 RECIPE_LIST_URL = lazy_fixture('recipes_list_url')
 RECIPE_DETAIL_URL = lazy_fixture('recipes_detail_url')
-RECIPE_POST_FAVORITES_URL = lazy_fixture('favorite_url')
+RECIPE_POST_FAVORITES_URL = lazy_fixture('favorites_url')
 RECIPE_POST_SHOPPING_CART_URL = lazy_fixture('shopping_cart_url')
 
 pytestmark = pytest.mark.django_db
@@ -50,19 +50,17 @@ def test_control_get_method_status_codes(
     assert client_fixture.get(url).status_code == expected_status
 
 
-@pytest.mark.skip(reason='В разработке')
+# @pytest.mark.skip(reason='В разработке')
 @pytest.mark.parametrize(
     'client_fixture, url, expected_status',
     (
-        (ANONYM_CLIENT, USER_POST_LOGIN_URL, HTTPStatus.OK),
-        (ANONYM_CLIENT, USER_POST_SUBSCRIPTION_URL, HTTPStatus.UNAUTHORIZED),
+        (ANONYM_CLIENT, USER_POST_SUBSCRIBE_URL, HTTPStatus.UNAUTHORIZED),
         (ANONYM_CLIENT, USER_POST_PASSWORD_URL, HTTPStatus.UNAUTHORIZED),
         (ANONYM_CLIENT, RECIPE_POST_FAVORITES_URL, HTTPStatus.UNAUTHORIZED),
         (ANONYM_CLIENT, RECIPE_POST_SHOPPING_CART_URL, HTTPStatus.UNAUTHORIZED),
-        (AUTHOR_CLIENT, USER_POST_SUBSCRIPTION_URL, HTTPStatus.OK),
-        (AUTHOR_CLIENT, USER_POST_PASSWORD_URL, HTTPStatus.OK),
-        (AUTHOR_CLIENT, RECIPE_POST_FAVORITES_URL, HTTPStatus.OK),
-        (AUTHOR_CLIENT, RECIPE_POST_SHOPPING_CART_URL, HTTPStatus.OK),
+        (AUTHOR_CLIENT, USER_POST_SUBSCRIBE_URL, HTTPStatus.CREATED),
+        (AUTHOR_CLIENT, RECIPE_POST_FAVORITES_URL, HTTPStatus.CREATED),
+        (AUTHOR_CLIENT, RECIPE_POST_SHOPPING_CART_URL, HTTPStatus.CREATED),
     ),
 )
 def test_control_post_method_status_codes(
