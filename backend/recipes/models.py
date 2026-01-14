@@ -104,8 +104,8 @@ class Recipe(models.Model):
     )
     image = models.ImageField(
         upload_to=RECIPE_IMAGE_PATH,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         default=None,
         verbose_name='Изображение',
     )
@@ -159,6 +159,14 @@ class ShoppingCart(models.Model):
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name='shoppingcart'
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_shoppingcart_per_user_per_recipe',
+            )
+        ]
 
 
 class Subscription(models.Model):

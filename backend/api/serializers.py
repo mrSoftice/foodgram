@@ -12,7 +12,6 @@ from recipes.models import (
     Recipe,
     RecipeIngredient,
     ShoppingCart,
-    Subscription,
     Tag,
 )
 from recipes.validators import username_validation
@@ -141,7 +140,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(
         read_only=True, default=False
     )
-    image = serializers.ImageField(read_only=True)
+    image = serializers.ImageField(required=True, allow_null=False)
 
     class Meta:
         model = Recipe
@@ -268,7 +267,7 @@ class RecipeForCartSerializer(serializers.ModelSerializer):
     и добавлении в Список Покупок
     """
 
-    image = serializers.ImageField(read_only=True)
+    image = serializers.ImageField(required=True, allow_null=False)
 
     class Meta:
         model = Recipe
@@ -319,29 +318,6 @@ class SubscribtionReadSerializer(serializers.ModelSerializer):
         return RecipeForCartSerializer(recipes, many=True).data
 
 
-class SubscribtionWriteSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания и удаления подписок пользователя."""
-
-    class Meta:
-        model = Subscription
-        fields = ('user', 'author')
-        validators = [
-            serializers.UniqueTogetherValidator(
-                queryset=Subscription.objects.all(),
-                fields=('user', 'author'),
-                message='Вы уже подписаны на этого пользователя.',
-            ),
-        ]
-
-    def validate_author(self, author):
-        user = self.context['request'].user
-        if user == author:
-            raise serializers.ValidationError(
-                {'author': 'Нельзя подписаться на самого себя.'}
-            )
-        return author
-
-
 class FavoriteSerializer(serializers.ModelSerializer):
     """Сериализатор для добавления и удаления рецепта в Избранное."""
 
@@ -350,7 +326,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = ('user', 'recipe')
         validators = [
             serializers.UniqueTogetherValidator(
-                queryset=model.objects.all(),
+                queryset=Favorite.objects.all(),
                 fields=('user', 'recipe'),
                 message='Рецепт уже есть в Избранном.',
             ),
@@ -365,7 +341,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         fields = ('user', 'recipe')
         validators = [
             serializers.UniqueTogetherValidator(
-                queryset=model.objects.all(),
+                queryset=ShoppingCart.objects.all(),
                 fields=('user', 'recipe'),
                 message='Рецепт уже есть в Списке Покупок.',
             ),

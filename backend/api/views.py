@@ -1,40 +1,38 @@
 from django.contrib.auth import get_user_model
-from django.db.models import BooleanField, Exists, OuterRef, Prefetch, Value
+from django.db.models import Exists, OuterRef, Prefetch
+from django.forms import ValidationError
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
-from foodgram.settings import (
-    SHOPPING_CART_FILENAME,
-    SHOPPING_CART_FORMAT,
-    USER_SELFINFO_PATH,
-)
-from recipes.models import (
-    Favorite,
-    Ingredient,
-    Recipe,
-    ShoppingCart,
-    Subscription,
-    Tag,
-)
-from recipes.services.shopping_cart import (
-    build_file_response,
-    get_shopping_cart_ingredients,
-    render_as_csv,
-    render_as_json,
-    render_as_txt,
-)
+from foodgram.settings import SHOPPING_CART_FORMAT, USER_SELFINFO_PATH
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.services import core, relations, subscriptions
+from recipes.services.shopping_cart import build_shopping_cart_file
 from recipes.services.short_links import get_short_link
 
 User = get_user_model()
 
 
+def service_exc_to_response(exc):
+    return Response(exc.detail, status=exc.status_code)
+
+
+def build_file_response(file_content, filename, content_type):
+    response = HttpResponse(file_content, content_type=content_type)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
 class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
     lookup_field = 'id'
     permission_classes = (AllowAny,)
     pagination_class = pagination.PageLimitPagination
@@ -45,22 +43,9 @@ class UserViewSet(ModelViewSet):
         return (IsAuthenticated(),)
 
     def get_queryset(self):
-        queryset = User.objects.all()
-
-        user = self.request.user
-        if user.is_authenticated:
-            queryset = queryset.annotate(
-                is_subscribed=Exists(
-                    Subscription.objects.filter(
-                        user=user, author=OuterRef('pk')
-                    )
-                )
-            )
-        else:
-            queryset = queryset.annotate(
-                is_subscribed=Value(False, output_field=BooleanField())
-            )
-        return queryset
+        return subscriptions.annotate_is_subscribed(
+            super().get_queryset(), self.request.user
+        )
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -142,34 +127,28 @@ class UserViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, id=None):
-        author = get_object_or_404(User, pk=id)
+        author = subscriptions.get_author_or_404(id)
 
-        create_subscription = serializers.SubscribtionWriteSerializer(
-            data={'user': request.user.id, 'author': author.id},
-            context={'request': request},
+        try:
+            subscriptions.subscribe(request.user, author)
+        except (ValidationError, NotAuthenticated) as e:
+            return service_exc_to_response(e)
+
+        return Response(
+            serializers.SubscribtionReadSerializer(
+                author, context={'request': request}
+            ).data,
+            status=status.HTTP_201_CREATED,
         )
-        create_subscription.is_valid(raise_exception=True)
-        create_subscription.save()
-
-        read_subscription = serializers.SubscribtionReadSerializer(
-            author, context={'request': request}
-        )
-
-        return Response(read_subscription.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None):
-        author = get_object_or_404(User, pk=id)
-        user = request.user
+        author = subscriptions.get_author_or_404(id)
         try:
-            subscription = user.subscriptions.get(author=author)
-        except Subscription.DoesNotExist:
-            return Response(
-                {'errors': 'Вы не подписаны на данного пользователя.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        subscription.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            subscriptions.unsubscribe(request.user, author)
+        except (ValidationError, NotAuthenticated) as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        return core.SUCCESS_DELETED_RESPONSE
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -202,87 +181,44 @@ class RecipesViewSet(ModelViewSet):
     @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
     def favorite(self, request, pk=None):
         return self._manage_recipe_relation(
-            request, pk, serializers.FavoriteSerializer, Favorite
+            request, pk, serializers.RecipeForCartSerializer, Favorite
         )
 
     @action(methods=['POST', 'DELETE'], detail=True, url_path='shopping_cart')
     def shopping_cart(self, request, pk=None):
         return self._manage_recipe_relation(
-            request, pk, serializers.ShoppingCartSerializer, ShoppingCart
+            request, pk, serializers.RecipeForCartSerializer, ShoppingCart
         )
 
     @action(methods=['GET'], detail=False, url_path='download_shopping_cart')
     def download_shopping_cart(self, request):
-        file_format = request.query_params.get('file_format', None)
-        if file_format is None:
-            file_format = SHOPPING_CART_FORMAT
-        data = get_shopping_cart_ingredients(request.user)
-        filename = f'{SHOPPING_CART_FILENAME}.{file_format}'
-        if file_format == 'csv':
-            file_content = render_as_csv(data)
-            content_type = 'text/csv'
-        elif file_format == 'json':
-            file_content = render_as_json(data)
-            content_type = 'aplication/json'
-        else:
-            file_content = render_as_txt(data)
-            content_type = 'text/plain'
-        return build_file_response(file_content, filename, content_type)
+        try:
+            content, filename, content_type = build_shopping_cart_file(
+                user=request.user,
+                file_format=request.query_params.get(
+                    'file_format', SHOPPING_CART_FORMAT
+                ),
+            )
+        except (ValidationError, NotAuthenticated) as e:
+            return Response(e.detail, status=e.status_code)
 
-    def _manage_recipe_relation(self, request, pk, serializer_class, model):
-        if request.user.is_anonymous:
-            return Response(
-                {'errors': 'Авторизуйтесь для выполнения данного действия.'},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-        recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == 'POST':
-            write_serializer = serializer_class(
-                data={'user': request.user.id, 'recipe': recipe.id},
-                context={'request': request},
-            )
-            write_serializer.is_valid(raise_exception=True)
-            write_serializer.save()
-
-            read_serializer = serializers.RecipeForCartSerializer(
-                recipe, context={'request': request}
-            )
-            return Response(
-                read_serializer.data, status=status.HTTP_201_CREATED
-            )
-        else:
-            try:
-                relation_instance = model.objects.filter(
-                    user=request.user, recipe=recipe
-                ).get()
-            except model.DoesNotExist:
-                return Response(
-                    {'errors': 'Рецепт не найден в списке.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            relation_instance.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        return build_file_response(content, filename, content_type)
 
     def get_queryset(self):
         user = self.request.user
 
-        author_queryset = User.objects.all()
-        if user.is_authenticated:
-            annotation = Exists(
-                Subscription.objects.filter(user=user, author=OuterRef('pk'))
-            )
-        else:
-            annotation = Value(False, output_field=BooleanField())
-        author_queryset = author_queryset.annotate(is_subscribed=annotation)
+        author_queryset = subscriptions.annotate_is_subscribed(
+            User.objects.all(), user
+        )
 
-        base_queryset = Recipe.objects.all().prefetch_related(
+        queryset = Recipe.objects.all().prefetch_related(
             Prefetch('author', queryset=author_queryset),
             'tags',
             'recipe_ingredients__ingredient__measurement_unit',
             'recipe_ingredients__measurement_unit',
         )
         if user.is_authenticated:
-            return base_queryset.annotate(
+            queryset = queryset.annotate(
                 is_favorited=Exists(
                     Favorite.objects.filter(user=user, recipe=OuterRef('pk'))
                 ),
@@ -292,9 +228,38 @@ class RecipesViewSet(ModelViewSet):
                     )
                 ),
             )
-        return base_queryset
+        return queryset
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return serializers.RecipeReadSerializer
         return serializers.RecipeCreateSerializer
+
+    def _manage_recipe_relation(
+        self, request, recipe_id, serializer_class, relation_model
+    ):
+        try:
+            if request.method == 'POST':
+                recipe = relations.add_recipe_relation(
+                    user=request.user,
+                    recipe_id=recipe_id,
+                    relation_model=relation_model,
+                )
+                serializer = serializer_class(
+                    # data={'user': request.user.id, 'recipe': recipe.id},
+                    recipe,
+                    context={'request': request},
+                )
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_201_CREATED,
+                )
+            # DELETE
+            relations.remove_recipe_relation(
+                user=request.user,
+                recipe_id=recipe_id,
+                relation_model=relation_model,
+            )
+            return core.SUCCESS_DELETED_RESPONSE
+        except (ValidationError, NotAuthenticated) as e:
+            return service_exc_to_response(e)

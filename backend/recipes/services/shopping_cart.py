@@ -1,7 +1,9 @@
 from django.db.models import F, Sum
-from django.http import HttpResponse
+from rest_framework.exceptions import ValidationError
 
+from foodgram.settings import SHOPPING_CART_FILENAME
 from recipes.models import RecipeIngredient
+from recipes.services import core
 
 
 def get_shopping_cart_ingredients(user):
@@ -61,9 +63,26 @@ def render_as_json(data):
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-def build_file_response(file_content, filename, content_type):
-    """Создает HTTP ответ с файлом для скачивания"""
+_RENDERERS = {
+    'txt': (render_as_txt, 'text/plain; charset=utf-8'),
+    'csv': (render_as_csv, 'text/csv; charset=utf-8'),
+    'json': (render_as_json, 'application/json; charset=utf-8'),
+}
 
-    response = HttpResponse(file_content, content_type=content_type)
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+
+def build_shopping_cart_file(*, user, file_format):
+    """
+    Возвращает (content, filename, content_type)
+    или кидает ValidationError.
+    """
+    renderer = _RENDERERS.get(file_format)
+    data = list(get_shopping_cart_ingredients(user))
+
+    if not data:
+        raise ValidationError(core.ERROR_EMPTY)
+
+    render_fn, content_type = renderer
+
+    content = render_fn(data)
+    filename = f'{SHOPPING_CART_FILENAME}.{file_format}'
+    return content, filename, content_type
