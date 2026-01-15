@@ -99,7 +99,9 @@ class TagSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения списка ингредиентов."""
 
-    measurement_unit = serializers.ReadOnlyField(source='measurement_unit.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='measurement_unit.name'
+    )
 
     class Meta:
         model = Ingredient

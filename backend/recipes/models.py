@@ -45,7 +45,9 @@ class User(AbstractUser):
 
 
 class MeasurementUnit(models.Model):
-    name = models.CharField(max_length=64, unique=True, verbose_name='Название')
+    name = models.CharField(
+        max_length=64, unique=True, verbose_name='Название'
+    )
 
     class Meta:
         verbose_name = 'Единица измерения'
@@ -56,7 +58,9 @@ class MeasurementUnit(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=32, unique=True, verbose_name='Название')
+    name = models.CharField(
+        max_length=32, unique=True, verbose_name='Название'
+    )
     slug = models.SlugField(max_length=32, unique=True, verbose_name='Слаг')
 
     class Meta:

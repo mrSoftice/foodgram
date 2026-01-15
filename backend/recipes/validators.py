@@ -10,7 +10,9 @@ USERNAME_WITH_BAD_SYMBOLS = 'Поле "username" содержит недопус
 
 def username_validation(username):
     if invalid_symbols := re.findall(USERNAME_ANTIPATTERN, username):
-        raise ValidationError(USERNAME_WITH_BAD_SYMBOLS.format(invalid_symbols))
+        raise ValidationError(
+            USERNAME_WITH_BAD_SYMBOLS.format(invalid_symbols)
+        )
     if username in FORBIDDEN_USERNAMES:
         raise ValidationError(
             {'username': USERNAME_NOT_ALLOWED.format(username)}

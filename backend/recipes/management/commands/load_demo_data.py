@@ -103,7 +103,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Пользователи: создано {created}, всего {User.objects.count()}'
+                f'Ползователи: создано {created}, всего {User.objects.count()}'
             )
         )
 
@@ -144,7 +144,9 @@ class Command(BaseCommand):
 
             # Ингредиенты (name + measurement_unit)
             for ing in item['ingredients']:
-                unit = MeasurementUnit.objects.get(name=ing['measurement_unit'])
+                unit = MeasurementUnit.objects.get(
+                    name=ing['measurement_unit']
+                )
                 ingredient = Ingredient.objects.get(
                     name=ing['name'], measurement_unit=unit
                 )
