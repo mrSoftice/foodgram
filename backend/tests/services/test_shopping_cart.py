@@ -48,9 +48,8 @@ def test_render_as_txt():
         {'name': 'Sugar', 'total_amount': 10, 'measure_unit': 'g'},
         {'name': 'Salt', 'total_amount': 1, 'measure_unit': 'g'},
     ]
-    expected = (
-        'Ingredient - Total Amount - Measurement Unit\nSugar - 10 g\nSalt - 1 g'
-    )
+    expected = 'Ingredient - Total Amount - Measurement Unit'
+    '\nSugar - 10 g\nSalt - 1 g'
     assert render_as_txt(data) == expected
 
 
@@ -121,7 +120,9 @@ def test_build_shopping_cart_file_returns_content_filename_and_type(
 
 
 @pytest.mark.django_db
-def test_build_shopping_cart_file_raises_validation_error_on_empty_cart(author):
+def test_build_shopping_cart_file_raises_validation_error_on_empty_cart(
+    author,
+):
     # У author нет позиций в shopping cart
     with pytest.raises(ValidationError) as exc_info:
         build_shopping_cart_file(user=author, file_format='txt')

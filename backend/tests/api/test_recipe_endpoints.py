@@ -6,8 +6,6 @@ from recipes.services.short_links import encode_hashid
 
 @pytest.mark.django_db
 def test_get_link_returns_short_link(user_client, recipe1, get_short_link_url):
-    # url = f'/api/recipes/{recipe1.id}/get-link/'
-
     response = user_client.get(get_short_link_url)
 
     assert response.status_code == 200
@@ -17,9 +15,7 @@ def test_get_link_returns_short_link(user_client, recipe1, get_short_link_url):
 
 
 @pytest.mark.django_db
-def test_shopping_cart_requires_auth(anonym_client, recipe1, shopping_cart_url):
-    # url = f'/api/recipes/{recipe1.id}/shopping_cart/'
-
+def test_shopping_cart_requires_auth(anonym_client, shopping_cart_url):
     response = anonym_client.post(shopping_cart_url)
 
     assert response.status_code == 401
@@ -29,8 +25,6 @@ def test_shopping_cart_requires_auth(anonym_client, recipe1, shopping_cart_url):
 def test_shopping_cart_add_and_remove(
     user_client, user, recipe1, shopping_cart_url
 ):
-    # url = f'/api/recipes/{recipe.id}/shopping_cart/'
-
     add_response = user_client.post(shopping_cart_url)
 
     assert add_response.status_code == 201
@@ -43,11 +37,7 @@ def test_shopping_cart_add_and_remove(
 
 
 @pytest.mark.django_db
-def test_shopping_cart_rejects_duplicate(
-    user_client, recipe1, shopping_cart_url
-):
-    # url = f'/api/recipes/{recipe1.id}/shopping_cart/'
-
+def test_shopping_cart_rejects_duplicate(user_client, shopping_cart_url):
     first_response = user_client.post(shopping_cart_url)
     second_response = user_client.post(shopping_cart_url)
 
