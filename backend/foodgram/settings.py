@@ -2,7 +2,6 @@
 Django settings for Foodgram project.
 """
 
-import string
 from os import getenv
 from pathlib import Path
 
@@ -170,8 +169,5 @@ AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
 SHOPPING_CART_FILENAME = 'shopping_cart'
 SHOPPING_CART_FORMAT = 'txt'
-BASE62_ALPHABET = (
-    string.digits + string.ascii_lowercase + string.ascii_uppercase
-)
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']

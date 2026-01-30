@@ -1,9 +1,13 @@
+from django.conf import settings
 from django.db.models import F, Sum
 from rest_framework.exceptions import ValidationError
 
-from foodgram.settings import SHOPPING_CART_FILENAME
 from recipes.models import RecipeIngredient
 from recipes.services import core
+
+SHOPPING_CART_FORMAT = getattr(
+    settings, 'SHOPPING_CART_FILENAME', 'shopping_cart'
+)
 
 
 def get_shopping_cart_ingredients(user):

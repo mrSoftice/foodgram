@@ -1,36 +1,16 @@
 from hashids import Hashids
 
-from foodgram.settings import BASE62_ALPHABET
-
 _HASHIDS = Hashids(salt='foodgram', min_length=3)
-
-
-def encode_base62(num):
-    """Кодирует целое число в строку в системе Base62."""
-
-    if num == 0:
-        return BASE62_ALPHABET[0]
-    base = len(BASE62_ALPHABET)
-    encoded = []
-    while num > 0:
-        num, rem = divmod(num, base)
-        encoded.append(BASE62_ALPHABET[rem])
-    return ''.join(reversed(encoded))
-
-
-def decode_base62(encoded_str):
-    """Декодирует строку в системе Base62 обратно в целое число."""
-
-    base = len(BASE62_ALPHABET)
-    decoded = 0
-    for char in encoded_str:
-        decoded = decoded * base + BASE62_ALPHABET.index(char)
-    return decoded
 
 
 def encode_hashid(id):
     """Кодирует идентификатор в короткую строку с помощью Hashids."""
-    return _HASHIDS.encode(id)
+    if id is None:
+        return ''
+    try:
+        return _HASHIDS.encode(int(id))
+    except (TypeError, ValueError):
+        return ''
 
 
 def decode_hashid(encoded_str):

@@ -10,4 +10,4 @@ def short_recipe_redirect(request, code):
     except ValueError:
         raise Http404('Invalid short link')
 
-    return redirect(f'/recipes/{recipe_id}')
+    return redirect(f'/recipes/{recipe_id}/')

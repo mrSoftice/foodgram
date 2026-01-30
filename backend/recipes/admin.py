@@ -8,7 +8,6 @@ from django.utils.http import urlencode
 from .models import (
     Favorite,
     Ingredient,
-    MeasurementUnit,
     Recipe,
     RecipeIngredient,
     ShoppingCart,
@@ -46,12 +45,6 @@ class TagAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
     recipes_count_lookup = 'recipes'
 
 
-@admin.register(MeasurementUnit)
-class MeasurementUnitAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-    search_fields = ('name',)
-
-
 @admin.register(Ingredient)
 class IngredientAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'measurement_unit', 'recipes_count')
@@ -59,24 +52,17 @@ class IngredientAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
         'name',
         'measurement_unit',
     )
-    list_select_related = ('measurement_unit',)
+    list_filter = ('measurement_unit',)
     recipes_count_lookup = 'in_recipes__recipe'
 
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
-    autocomplete_fields = ('ingredient',)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.select_related(
-            'ingredient__measurement_unit', 'measurement_unit'
-        )
 
 
 @admin.register(Recipe)
-class RecipeAdmin(admin.ModelAdmin):
+class RecipeAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
     list_select_related = ('author',)
     list_display = ('name', 'author', 'favorites_count')
     search_fields = (
@@ -90,7 +76,6 @@ class RecipeAdmin(admin.ModelAdmin):
     readonly_fields = ('favorites_count',)
 
     inlines = (RecipeIngredientInline,)
-    # exclude = ('tags',)
 
     @admin.display(description='В избранном')
     def favorites_count(self, recipe):
@@ -106,7 +91,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(UserAdmin):
+class UserAdmin(RecipesCountAdminMixin, UserAdmin):
     list_display = (
         'id',
         'username',
@@ -125,11 +110,11 @@ class UserAdmin(UserAdmin):
     )
 
     readonly_fields = ('avatar_preview',)
+    recipes_count_lookup = 'recipes'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.annotate(
-            recipes_total=Count('recipes', distinct=True),
             subscriptions_total=Count('subscriptions', distinct=True),
             subscribers_total=Count('authors', distinct=True),
         )
@@ -150,10 +135,6 @@ class UserAdmin(UserAdmin):
             )
         return '-'
 
-    @admin.display(description='Рецептов', ordering='recipes_total')
-    def recipes_count(self, obj):
-        return obj.recipes_total
-
     def _subscription_changelist_link(
         self, *, label: str, filter_key: str, user_id: int, value: int
     ):
@@ -165,7 +146,6 @@ class UserAdmin(UserAdmin):
 
     @admin.display(description='Подписок', ordering='subscriptions_total')
     def subscriptions_count(self, obj):
-        # return obj.subscriptions_total
         return self._subscription_changelist_link(
             label='Подписок',
             filter_key='user__id__exact',  # user = obj (на кого подписан)

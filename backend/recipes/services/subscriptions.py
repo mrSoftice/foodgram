@@ -51,22 +51,16 @@ def subscribe(user, author):
     return subscription
 
 
-def unsubscribe(user, author):
+def unsubscribe(user, author_id):
     """Удаляет подписку на автора.
     Возвращает:
       - None (успех)
       - Response (ошибка)
     """
-    if user.is_anonymous:
-        raise NotAuthenticated(core.ERROR_UNAUTHORIZED)
-
-    if user == author:
-        # это спорно, но логично держать единое правило
-        raise ValidationError(core.ERROR_SELF_SUBSCRIPTION)
 
     deleted_count, _ = Subscription.objects.filter(
         user=user,
-        author=author,
+        author__id=author_id,
     ).delete()
     if deleted_count == 0:
         raise ValidationError(core.ERROR_NOT_SUBSCRIBED)

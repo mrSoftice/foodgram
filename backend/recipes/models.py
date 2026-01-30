@@ -51,19 +51,6 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
 
-class MeasurementUnit(models.Model):
-    name = models.CharField(
-        max_length=64, unique=True, verbose_name='Название'
-    )
-
-    class Meta:
-        verbose_name = 'Единица измерения'
-        verbose_name_plural = 'Единицы измерения'
-
-    def __str__(self):
-        return self.name
-
-
 class Tag(models.Model):
     name = models.CharField(
         max_length=32, unique=True, verbose_name='Название'
@@ -83,10 +70,8 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=128, verbose_name='Название')
-    measurement_unit = models.ForeignKey(
-        MeasurementUnit,
-        on_delete=models.CASCADE,
-        verbose_name='Единица измерения',
+    measurement_unit = models.CharField(
+        max_length=64, verbose_name='Единица измерения'
     )
 
     class Meta:
@@ -150,9 +135,6 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество', validators=[MinValueValidator(1)]
     )
-    measurement_unit = models.ForeignKey(
-        MeasurementUnit, on_delete=models.CASCADE
-    )
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
@@ -204,7 +186,7 @@ class Subscription(models.Model):
     """
     Подписка:
         оbject.subscriptions - на кого подписан пользовpython manageатель
-        object.followers - кто подписан на пользователя
+        object.authors - кто подписан на пользователя
     """
 
     user = models.ForeignKey(

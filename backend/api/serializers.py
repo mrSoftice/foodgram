@@ -99,9 +99,7 @@ class TagSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения списка ингредиентов."""
 
-    measurement_unit = serializers.ReadOnlyField(
-        source='measurement_unit.name'
-    )
+    measurement_unit = serializers.ReadOnlyField()
 
     class Meta:
         model = Ingredient
@@ -114,7 +112,7 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
-        source='ingredient.measurement_unit.__str__'
+        source='ingredient.measurement_unit'
     )
     amount = serializers.ReadOnlyField()
 
@@ -224,7 +222,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                     recipe=recipe,
                     ingredient=ingredient,
                     amount=ingredient_data['amount'],
-                    measurement_unit=ingredient.measurement_unit,
                 )
             )
         RecipeIngredient.objects.bulk_create(recipe_ingredients)
@@ -252,7 +249,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
 
         instance.tags.set(tags, clear=True)
-        instance.ingedients_amounts.all().delete()
+        instance.ingredients_amounts.all().delete()
         self.create_ingredients(ingredients, instance)
 
         instance.save()
