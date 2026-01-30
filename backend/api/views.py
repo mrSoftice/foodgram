@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Exists, OuterRef
 from django.forms import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -12,7 +12,7 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
-from foodgram.settings import SHOPPING_CART_FORMAT, USER_SELFINFO_PATH
+from foodgram.settings import SHOPPING_CART_FORMAT
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from recipes.services import core, relations, subscriptions
 from recipes.services.shopping_cart import build_shopping_cart_file
@@ -52,7 +52,7 @@ class UserViewSet(ModelViewSet):
             return serializers.UserCreateSerializer
         return serializers.UserSerializer
 
-    @action(methods=['GET'], detail=False, url_path=USER_SELFINFO_PATH)
+    @action(methods=['GET'], detail=False, url_path='me')
     def me(self, request):
         serializer = serializers.UserSerializer(
             self.get_queryset().get(pk=request.user.pk),
@@ -87,7 +87,7 @@ class UserViewSet(ModelViewSet):
     @action(
         methods=['PUT', 'DELETE'],
         detail=False,
-        url_path=USER_SELFINFO_PATH + '/avatar',
+        url_path='me/avatar',
         url_name='avatar',
         permission_classes=[IsAuthenticated],
     )
@@ -211,11 +211,10 @@ class RecipesViewSet(ModelViewSet):
             User.objects.all(), user
         )
 
-        queryset = Recipe.objects.all().prefetch_related(
-            Prefetch('author', queryset=author_queryset),
+        queryset = Recipe.objects.select_related('author').prefetch_related(
             'tags',
-            'recipe_ingredients__ingredient__measurement_unit',
-            'recipe_ingredients__measurement_unit',
+            'ingredients_amounts__ingredient',
+            'ingredients_amounts__measurement_unit',
         )
         if user.is_authenticated:
             queryset = queryset.annotate(

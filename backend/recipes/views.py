@@ -1,7 +1,6 @@
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import redirect
 
-from recipes.models import Recipe
 from recipes.services.short_links import get_id_from_short_link
 
 
@@ -11,5 +10,4 @@ def short_recipe_redirect(request, code):
     except ValueError:
         raise Http404('Invalid short link')
 
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-    return redirect(f'/recipes/{recipe.id}')
+    return redirect(f'/recipes/{recipe_id}')

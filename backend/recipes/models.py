@@ -1,9 +1,13 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
 import recipes.constants as const
-from foodgram.settings import AVATAR_IMAGE_PATH, RECIPE_IMAGE_PATH
-from recipes.validators import username_validation, validate_cooking_time
+
+AVATAR_IMAGE_PATH = getattr(settings, 'AVATAR_IMAGE_PATH', '')
+RECIPE_IMAGE_PATH = getattr(settings, 'RECIPE_IMAGE_PATH', '')
+USERNAME_PATTERN = getattr(settings, 'USERNAME_PATTERN', r'^[\w.@+-]+\z')
 
 
 class User(AbstractUser):
@@ -11,7 +15,7 @@ class User(AbstractUser):
         'Логин',
         max_length=const.USERNAME_MAX_LENGTH,
         unique=True,
-        validators=[username_validation],
+        validators=[RegexValidator(USERNAME_PATTERN)],
     )
     email = models.EmailField(
         'Почта',
@@ -35,10 +39,13 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = [
+        'username',
+        'first_name',
+        'last_name',
+    ]
 
     class Meta:
-        default_related_name = 'authors'
         ordering = ('username',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
@@ -61,9 +68,12 @@ class Tag(models.Model):
     name = models.CharField(
         max_length=32, unique=True, verbose_name='Название'
     )
-    slug = models.SlugField(max_length=32, unique=True, verbose_name='Слаг')
+    slug = models.SlugField(
+        max_length=32, unique=True, verbose_name='Идентификатор'
+    )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
 
@@ -83,6 +93,12 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         default_related_name = 'ingredients'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_name_measurement_unit_in_Ingredient',
+            )
+        ]
         unique_together = ('name', 'measurement_unit')
 
     def __str__(self):
@@ -95,22 +111,19 @@ class Recipe(models.Model):
     )
     name = models.CharField(max_length=256, verbose_name='Название')
     text = models.TextField(verbose_name='Описание')
-    tags = models.ManyToManyField(Tag, verbose_name='Теги')
+    tags = models.ManyToManyField(
+        Tag, verbose_name='Теги', related_name='recipes'
+    )
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
     )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления, мин',
-        null=False,
-        blank=False,
-        validators=(validate_cooking_time,),
+        validators=(MinValueValidator(1),),
     )
     image = models.ImageField(
         upload_to=RECIPE_IMAGE_PATH,
-        blank=False,
-        null=False,
-        default=None,
         verbose_name='Изображение',
     )
     pub_date = models.DateField(
@@ -129,10 +142,14 @@ class Recipe(models.Model):
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients'
+        Recipe, on_delete=models.CASCADE, related_name='ingredients_amounts'
     )
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.PositiveSmallIntegerField(verbose_name='Количество')
+    ingredient = models.ForeignKey(
+        Ingredient, on_delete=models.CASCADE, related_name='in_recipes'
+    )
+    amount = models.PositiveSmallIntegerField(
+        verbose_name='Количество', validators=[MinValueValidator(1)]
+    )
     measurement_unit = models.ForeignKey(
         MeasurementUnit, on_delete=models.CASCADE
     )
@@ -148,19 +165,22 @@ class RecipeIngredient(models.Model):
         ]
 
 
-class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class UserRecipeRelation(models.Model):
+    """Связь user <-> recipe (избранное/корзина и т.п.)."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='%(class)s_items'
+    )
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='favorites'
+        Recipe, on_delete=models.CASCADE, related_name='in_%(class)ss'
     )
 
     class Meta:
-        verbose_name = 'Избранное'
-        default_related_name = 'favorites'
+        abstract = True
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_favorite_per_user_per_recipe',
+                fields=('user', 'recipe'),
+                name='unique_%(class)s_user_per_recipe',
             )
         ]
 
@@ -168,26 +188,22 @@ class Favorite(models.Model):
         return f'{self.recipe.name} (для {self.user.username})'
 
 
-class ShoppingCart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='shoppingcart'
-    )
+class Favorite(UserRecipeRelation):
+    class Meta:
+        verbose_name = 'Избранное'
+        default_related_name = 'favorites'
 
+
+class ShoppingCart(UserRecipeRelation):
     class Meta:
         verbose_name = 'Список покупок'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_shoppingcart_per_user_per_recipe',
-            )
-        ]
+        default_related_name = 'shoppingcarts'
 
 
 class Subscription(models.Model):
     """
     Подписка:
-        оbject.subscriptions - на кого подписан пользователь
+        оbject.subscriptions - на кого подписан пользовpython manageатель
         object.followers - кто подписан на пользователя
     """
 
@@ -199,7 +215,7 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followers',
+        related_name='authors',
     )
 
     class Meta:

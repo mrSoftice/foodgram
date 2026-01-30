@@ -124,6 +124,14 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = '/backend_static/static'
 
+if DEBUG:
+    STATICFILES_DIRS = [
+        BASE_DIR.parent / 'frontend' / 'build' / 'static',
+    ]
+    TEMPLATES[0]['DIRS'] += [
+        BASE_DIR.parent / 'frontend' / 'build',
+    ]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
@@ -155,12 +163,7 @@ DJOSER = {
     },
 }
 
-USER_SELFINFO_PATH = 'me'
-USERNAME_ANTIPATTERN = r'[^\w.@+-]'
-FORBIDDEN_USERNAMES = (
-    USER_SELFINFO_PATH,
-    'administrator',
-)
+USERNAME_PATTERN = r'^[\w.@+-]+\z'
 RECIPE_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 RECIPE_IMAGE_PATH = 'recipes/image'
 AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024

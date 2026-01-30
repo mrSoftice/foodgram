@@ -48,7 +48,7 @@ def decode_hashid(encoded_str):
 def get_short_link(id, request):
     """Генерирует короткую ссылку на основе идентификатора."""
     encoded_id = encode_hashid(id)
-    return request.build_absolute_uri(f'/s/{encoded_id}')
+    return request.build_absolute_uri(f'/s/{encoded_id}/')
 
 
 def get_id_from_short_link(code):

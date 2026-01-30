@@ -134,7 +134,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения рецепта в списке рецептов"""
 
     ingredients = RecipeIngredientReadSerializer(
-        many=True, source='recipe_ingredients'
+        many=True, source='ingredients_amounts'
     )
     tags = TagSerializer(many=True)
     author = UserSerializer(read_only=True)
@@ -181,7 +181,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate_ingredients(self, value):
-        validators.list_is_not_empty(value, field_name='ингредиенты')
+        if not value:
+            raise serializers.ValidationError(
+                'Поле "Ингредиенты" не должно быть пустым.'
+            )
         validators.no_repeating_id_in_list(value, field_name='ингредиенты')
 
         for ingredient in value:
@@ -204,13 +207,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_tags(self, value):
-        validators.list_is_not_empty(value, field_name='теги')
+        if not value:
+            raise serializers.ValidationError(
+                'Поле "Теги" не должно быть пустым.'
+            )
         if len(value) != len(set(value)):
             raise serializers.ValidationError('Теги не должны повторяться.')
         return value
-
-    def validate_cooking_time(self, value):
-        return validators.validate_cooking_time(value)
 
     def create_ingredients(self, ingredients, recipe):
         recipe_ingredients = []
@@ -249,7 +252,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
 
         instance.tags.set(tags, clear=True)
-        instance.recipe_ingredients.all().delete()
+        instance.ingedients_amounts.all().delete()
         self.create_ingredients(ingredients, instance)
 
         instance.save()

@@ -9,7 +9,7 @@ from recipes.services import core
 def get_shopping_cart_ingredients(user):
     """Возвращает список ингредиентов пользователя из списка покупок"""
     return (
-        RecipeIngredient.objects.filter(recipe__shoppingcart__user=user)
+        RecipeIngredient.objects.filter(recipe__in_shoppingcarts__user=user)
         .values(
             name=F('ingredient__name'),
             measure_unit=F('measurement_unit__name'),

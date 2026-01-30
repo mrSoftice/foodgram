@@ -128,7 +128,7 @@ def test_build_shopping_cart_file_raises_validation_error_on_empty_cart(
         build_shopping_cart_file(user=author, file_format='txt')
 
     # Не привязываемся к структуре detail (может быть list/dict/ErrorDetail),
-    # но убеждаемся, что текст "пустой список" присутствует.
+    # но убеждаемся, что текст 'пустой список' присутствует.
     assert core.ERROR_EMPTY['errors'] in str(exc_info.value.detail)
 
 
