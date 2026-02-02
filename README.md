@@ -112,7 +112,7 @@ python manage.py createsuperuser
 python3 manage.py runserver
 ```
 
-После запуска проекта будет доступены адреса
+После запуска проекта будут доступны адреса
 - [Сам сайт](http://localhost:8000)
 - [Админ-панель](http://localhost:8000/admin)
 - [Документация в формате **ReDoc**](http://localhost:8000/api/docs/)
@@ -149,8 +149,8 @@ python manage.py load_tags
 -	Python 3
 -	Django
 -	Django Rest Framework
-- Djoser
-- PostgreSQL
+-   Djoser
+-   PostgreSQL
 -	React
 -	Docker
 
