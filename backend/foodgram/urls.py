@@ -4,8 +4,6 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
-from recipes.views import short_recipe_redirect
-
 MEDIA_URL = getattr(settings, 'MEDIA_URL', '/media/')
 MEDIA_ROOT = getattr(settings, 'MEDIA_ROOT', 'media/')
 
@@ -14,7 +12,7 @@ app_name = 'foodgram'
 urlpatterns = [
     path('api/', include('api.urls')),
     path('admin/', admin.site.urls, name='admin'),
-    path('s/<str:code>/', short_recipe_redirect, name='short-recipe-link'),
+    path('s/<int:recipe_id>/', include('recipes.urls')),
 ]
 
 

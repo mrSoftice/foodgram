@@ -8,6 +8,7 @@ import recipes.constants as const
 AVATAR_IMAGE_PATH = getattr(settings, 'AVATAR_IMAGE_PATH', '')
 RECIPE_IMAGE_PATH = getattr(settings, 'RECIPE_IMAGE_PATH', '')
 USERNAME_PATTERN = getattr(settings, 'USERNAME_PATTERN', r'^[\w.@+-]+\z')
+COOKING_TIME_MIN_VALUE = getattr(settings, 'COOKING_TIME_MIN_VALUE', 1)
 
 
 class User(AbstractUser):
@@ -103,9 +104,9 @@ class Recipe(models.Model):
         Ingredient,
         through='RecipeIngredient',
     )
-    cooking_time = models.PositiveSmallIntegerField(
+    cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления, мин',
-        validators=(MinValueValidator(1),),
+        validators=(MinValueValidator(COOKING_TIME_MIN_VALUE),),
     )
     image = models.ImageField(
         upload_to=RECIPE_IMAGE_PATH,

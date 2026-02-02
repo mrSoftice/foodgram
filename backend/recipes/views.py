@@ -1,5 +1,7 @@
 from django.shortcuts import redirect
+from rest_framework.views import APIView
 
 
-def short_recipe_redirect(request, recipe_id):
-    return redirect(f'/recipes/{recipe_id}/')
+class ShortLinkView(APIView):
+    def get(self, request, recipe_id):
+        return redirect(f'/recipes/{recipe_id}/')

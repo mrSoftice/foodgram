@@ -3,12 +3,12 @@ from rest_framework.response import Response
 
 ERROR_UNAUTHORIZED = {'detail': 'Учетные данные не были предоставлены.'}
 
-ERROR_RECIPE_NOT_IN_LIST = {'errors': 'Рецепт {recipe} не найден в {list}.'}
-ERROR_RECIPE_IN_LIST = {'errors': 'Рецепт {recipe} уже есть в {list}.'}
+ERROR_RECIPE_NOT_IN_LIST = {'detail': 'Рецепт {recipe} не найден в {list}.'}
+ERROR_RECIPE_IN_LIST = {'detail': 'Рецепт {recipe} уже есть в {list}.'}
 
 ERROR_SELF_SUBSCRIPTION = {'author': 'Нельзя подписаться на самого себя.'}
-ERROR_ALREADY_SUBSCRIBED = {'errors': 'Вы уже подписаны на  автора {author}.'}
-ERROR_NOT_SUBSCRIBED = {'errors': 'Вы не подписаны на автора {author}.'}
+ERROR_ALREADY_SUBSCRIBED = {'detail': 'Вы уже подписаны на  автора {author}.'}
+ERROR_NOT_SUBSCRIBED = {'detail': 'Вы не подписаны на автора {author}.'}
 
 ERROR_BAD_FORMAT = {'file_format': 'Неподдерживаемый формат файла.'}
 

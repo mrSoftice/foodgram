@@ -1,13 +1,16 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
-from django.forms import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotAuthenticated, NotFound
+from rest_framework.exceptions import (
+    NotAuthenticated,
+    NotFound,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -22,7 +25,7 @@ from recipes.models import (
     Subscription,
     Tag,
 )
-from recipes.services import core, relations, subscriptions
+from recipes.services import core, subscriptions
 from recipes.services.shopping_cart import build_shopping_cart_file
 
 User = get_user_model()
@@ -78,7 +81,7 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         return self.get_paginated_response(
-            serializers.SubscribtionReadSerializer(
+            serializers.SubscribedAuthorSerializer(
                 self.paginate_queryset(
                     User.objects.filter(authors__user=request.user)
                 ),
@@ -101,7 +104,7 @@ class UserViewSet(DjoserUserViewSet):
             return Response(e.detail, status=e.status_code)
 
         return Response(
-            serializers.SubscribtionReadSerializer(
+            serializers.SubscribedAuthorSerializer(
                 author, context={'request': request}
             ).data,
             status=status.HTTP_201_CREATED,
@@ -138,7 +141,7 @@ class UserViewSet(DjoserUserViewSet):
         - Response (ошибка)
         """
 
-        deleted_count, _ = get_object_or_404(
+        get_object_or_404(
             Subscription, user=user, author__id=author_id
         ).delete()
 
@@ -173,13 +176,13 @@ class RecipesViewSet(ModelViewSet):
     @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
     def favorite(self, request, pk=None):
         return self._manage_recipe_relation(
-            request, pk, serializers.RecipeForCartSerializer, Favorite
+            request, pk, serializers.RecipeShortSerializer, Favorite
         )
 
     @action(methods=['POST', 'DELETE'], detail=True, url_path='shopping_cart')
     def shopping_cart(self, request, pk=None):
         return self._manage_recipe_relation(
-            request, pk, serializers.RecipeForCartSerializer, ShoppingCart
+            request, pk, serializers.RecipeShortSerializer, ShoppingCart
         )
 
     @action(methods=['GET'], detail=False, url_path='download_shopping_cart')
@@ -196,10 +199,6 @@ class RecipesViewSet(ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
-        # author_queryset = subscriptions.annotate_is_subscribed(
-        #     User.objects.all(), user
-        # )
 
         queryset = Recipe.objects.select_related('author').prefetch_related(
             'tags',
@@ -221,20 +220,20 @@ class RecipesViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return serializers.RecipeReadSerializer
-        return serializers.RecipeCreateSerializer
+        return serializers.RecipeWriteSerializer
 
     def _manage_recipe_relation(
         self, request, recipe_id, serializer_class, relation_model
     ):
         if request.method == 'DELETE':
-            relations.remove_recipe_relation(
+            self._remove_recipe_relation(
                 user=request.user,
                 recipe_id=recipe_id,
                 relation_model=relation_model,
             )
             return core.SUCCESS_DELETED_RESPONSE
 
-        recipe = relations.add_recipe_relation(
+        recipe = self._add_recipe_relation(
             user=request.user,
             recipe_id=recipe_id,
             relation_model=relation_model,
@@ -246,3 +245,34 @@ class RecipesViewSet(ModelViewSet):
             ).data,
             status=status.HTTP_201_CREATED,
         )
+
+    def _add_recipe_relation(self, *, user, recipe_id, relation_model):
+        """
+        Создать связь user<->recipe в relation_model (Favorite/ShoppingCart).
+        Возвращает:
+        - Recipe (успех)
+        - Поднимает исключение ValidationError (ошибка)
+        """
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
+        _, created = relation_model.objects.get_or_create(
+            user=user, recipe=recipe
+        )
+        if not created:
+            raise ValidationError(
+                core.format_error(
+                    core.ERROR_RECIPE_IN_LIST,
+                    recipe=recipe.name,
+                    list=relation_model.__name__,
+                )
+            )
+        return recipe
+
+    def _remove_recipe_relation(self, *, user, recipe_id, relation_model):
+        """
+        Удалить связь user<->recipe из relation_model (Favorite/ShoppingCart).
+        Возвращает:
+        - None (успех)
+        - Поднимает исключение ValidationError (ошибка)
+        """
+        relation_model.objects.filter(user=user, recipe_id=recipe_id).delete()
+        return None
