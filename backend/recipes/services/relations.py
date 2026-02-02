@@ -16,11 +16,15 @@ def add_recipe_relation(*, user, recipe_id, relation_model):
         raise NotAuthenticated(detail=core.ERROR_UNAUTHORIZED)
 
     recipe = get_object_or_404(Recipe, pk=recipe_id)
-    _, created = core.get_or_create_model_instance(
-        relation_model, user=user, recipe=recipe
-    )
+    _, created = relation_model.objects.get_or_create(user=user, recipe=recipe)
     if not created:
-        raise ValidationError(core.ERROR_RECIPE_IN_LIST)
+        raise ValidationError(
+            core.format_error(
+                core.ERROR_RECIPE_IN_LIST,
+                recipe=recipe.name,
+                list=relation_model.__name__,
+            )
+        )
     return recipe
 
 
@@ -31,13 +35,16 @@ def remove_recipe_relation(*, user, recipe_id, relation_model):
       - None (успех)
       - Поднимает исключение ValidationError (ошибка)
     """
-    if user.is_anonymous:
-        raise NotAuthenticated(detail=core.ERROR_UNAUTHORIZED)
-
     recipe = get_object_or_404(Recipe, pk=recipe_id)
     deleted_count, _ = relation_model.objects.filter(
         user=user, recipe=recipe
     ).delete()
     if deleted_count == 0:
-        raise ValidationError(core.ERROR_RECIPE_NOT_IN_LIST)
+        raise ValidationError(
+            core.format_error(
+                core.ERROR_RECIPE_NOT_IN_LIST,
+                recipe=recipe.name,
+                list=relation_model.__name__,
+            )
+        )
     return None

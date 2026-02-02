@@ -1,69 +1,9 @@
-from pathlib import Path
-
-from django.core.management.base import BaseCommand
-
 from recipes.models import Ingredient
-from recipes.services.utils import read_data_from_file
+
+from ._importers import BaseImportCommand
 
 
-class Command(BaseCommand):
-    """
-    Команда для загрузки ингредиентов из CSV-файла.
-    Проверка уникальности вручную по комбинации (name, measurement_unit),'
-    чтобы избежать ошибок ON CONFLICT в SQLite.
-    bulk_create только для новых объектов, дубликаты пропускаются.
-    Работает как с уже существующими MeasurementUnit, так и с новыми.
-    """
-
-    help = (
-        'Load ingredients list from file. '
-        'Parameters: '
-        '  --data-dir (default: ./data) '
-        '  --format (csv or json, default: json)'
-    )
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--data-dir',
-            default='./data',
-            help='Каталог с JSON файлами (по умолчанию ./data).',
-        )
-        parser.add_argument(
-            '--format',
-            default='json',
-            choices=['csv', 'json'],
-            help='Формат файла с ингредиентами (по умолчанию json).',
-        )
-
-    def handle(self, *args, **options):
-        data_dir = Path(options['data_dir'])
-        frmt = options['format']
-
-        ingredients_path = Path(data_dir, 'ingredients.' + frmt)
-
-        created_ingredients = load_ingredients(ingredients_path)
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Загружено {len(created_ingredients)} ингредиентов, '
-                f'всего {Ingredient.objects.count()}.'
-            )
-        )
-
-
-def load_ingredients(filename):
-    data = read_data_from_file(filename)
-    existing_elements = set(
-        Ingredient.objects.values_list('name', 'measurement_unit')
-    )
-
-    created_elements = Ingredient.objects.bulk_create(
-        [
-            Ingredient(
-                name=row['name'],
-                measurement_unit=row['measurement_unit'],
-            )
-            for row in data
-            if (row['name'], row['measurement_unit']) not in existing_elements
-        ]
-    )
-    return created_elements
+class Command(BaseImportCommand):
+    model = Ingredient
+    filename_stem = 'ingredients'
+    unique_fields = ('name', 'measurement_unit')

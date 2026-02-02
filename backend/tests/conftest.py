@@ -4,14 +4,7 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from foodgram.settings import USER_SELFINFO_PATH
-from recipes.models import (
-    Ingredient,
-    MeasurementUnit,
-    Recipe,
-    RecipeIngredient,
-    Tag,
-)
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 
 User = get_user_model()
 
@@ -66,7 +59,7 @@ def anonym_client():
 @pytest.fixture
 @pytest.mark.django_db
 def unit():
-    return MeasurementUnit.objects.create(name='g')
+    return 'g'
 
 
 def create_tags():
@@ -105,13 +98,11 @@ def recipe1(author, unit, ingredient_apple, ingredient_banana):
         recipe=recipe1,
         ingredient=ingredient_apple,
         amount=100,
-        measurement_unit=unit,
     )
     RecipeIngredient.objects.create(
         recipe=recipe1,
         ingredient=ingredient_banana,
         amount=1,
-        measurement_unit=unit,
     )
     return recipe1
 
@@ -138,7 +129,6 @@ def recipe2(author, unit, ingredient_apple):
         recipe=recipe2,
         ingredient=ingredient_apple,
         amount=50,
-        measurement_unit=unit,
     )
     return recipe2
 
@@ -158,7 +148,6 @@ def other_recipe(user, unit, ingredient_banana):
         recipe=other_recipe,
         ingredient=ingredient_banana,
         amount=999,
-        measurement_unit=unit,
     )
     return other_recipe
 
@@ -170,7 +159,7 @@ def users_login_url():
 
 @pytest.fixture
 def users_selfinfo_url():
-    return reverse('users-' + USER_SELFINFO_PATH)
+    return reverse('users-me')
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
 from django.forms import ValidationError
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
@@ -13,10 +14,16 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    ShoppingCart,
+    Subscription,
+    Tag,
+)
 from recipes.services import core, relations, subscriptions
 from recipes.services.shopping_cart import build_shopping_cart_file
-from recipes.services.short_links import get_short_link
 
 User = get_user_model()
 
@@ -86,10 +93,10 @@ class UserViewSet(DjoserUserViewSet):
         permission_classes=[IsAuthenticated],
     )
     def subscribe(self, request, id=None):
-        author = subscriptions.get_author_or_404(id)
+        author = get_object_or_404(User, id=id)
 
         try:
-            subscriptions.subscribe(request.user, author)
+            self._subscribe(request.user, author)
         except (ValidationError, NotAuthenticated) as e:
             return Response(e.detail, status=e.status_code)
 
@@ -103,8 +110,37 @@ class UserViewSet(DjoserUserViewSet):
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None):
         # author = subscriptions.get_author_or_404(id)
-        subscriptions.unsubscribe(request.user, id)
+        self._unsubscribe(request.user, id)
         return core.SUCCESS_DELETED_RESPONSE
+
+    def _subscribe(self, user, author):
+        """
+        Создает подписку на автора.
+        Возвращает:
+        - Subscription (успех)
+        - Поднимает исключение ValidationError (ошибка)
+        """
+        _, created = Subscription.objects.get_or_create(
+            user=user,
+            author=author,
+        )
+        if not created:
+            raise ValidationError(
+                core.format_error(
+                    core.ERROR_ALREADY_SUBSCRIBED, author=author.username
+                )
+            )
+
+    def _unsubscribe(self, user, author_id):
+        """Удаляет подписку на автора.
+        Возвращает:
+        - None (успех)
+        - Response (ошибка)
+        """
+
+        deleted_count, _ = get_object_or_404(
+            Subscription, user=user, author__id=author_id
+        ).delete()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -130,9 +166,9 @@ class RecipesViewSet(ModelViewSet):
     def get_link(self, request, pk=None):
         if not Recipe.objects.filter(pk=pk).exists():
             raise NotFound('Recipe not found.')
-        short_link = get_short_link(pk, request)
-
-        return Response({'short-link': short_link})
+        return Response(
+            {'short-link': request.build_absolute_uri(f'/s/{pk}/')}
+        )
 
     @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
     def favorite(self, request, pk=None):
