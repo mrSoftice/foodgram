@@ -155,6 +155,11 @@ REST_FRAMEWORK = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': False,
+    'PERMISSIONS': {
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user_detail': ['rest_framework.permissions.AllowAny'],
+        'user': ['rest_framework.permissions.IsAuthenticated'],  # /users/me
+    },
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'user_create': 'api.serializers.UserCreateSerializer',
@@ -169,5 +174,7 @@ AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
 SHOPPING_CART_FILENAME = 'shopping_cart'
 SHOPPING_CART_FORMAT = 'txt'
+COOKING_TIME_FILTERS = (10, 30, 60)
+COOKING_TIME_LONG_LABEL = 'дольше'
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']

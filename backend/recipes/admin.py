@@ -1,6 +1,7 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef, Q
 from django.urls import reverse
 from django.utils.html import format_html, mark_safe
 from django.utils.http import urlencode
@@ -15,6 +16,105 @@ from .models import (
     Tag,
     User,
 )
+
+
+class CookingTimeFilter(admin.SimpleListFilter):
+    title = 'Время приготовления'
+    parameter_name = 'cooking_time'
+
+    # Хранит построенные интервал, его Q-выражения
+    # tuple(метка интервала, Q-выражения, отображение для админ-панели)
+    intervals = []
+
+    def _get_limits(self):
+        raw = getattr(settings, 'COOKING_TIME_FILTERS', (10, 30, 60))
+        limits = sorted(set(int(x) for x in raw if int(x) > 0))
+        return limits
+
+    def _create_intervals(self):
+        limits = self._get_limits()
+        # строим интервалы:
+        # <=t1, (t1,t2], (t2,t3], ..., >t_last
+        prev = None
+        for t in limits:
+            if prev is None:
+                self.intervals.append(
+                    ('t1', Q(cooking_time__lte=t), f'до {t} мин.')
+                )
+            else:
+                self.intervals.append(
+                    (
+                        f't{prev}_{t}',
+                        Q(cooking_time__gt=prev, cooking_time__lte=t),
+                        f'от {prev + 1} до {t} мин.',
+                    )
+                )
+            prev = t
+        longer = getattr(settings, 'COOKING_TIME_LONG_LABEL', 'дольше')
+        self.intervals.append(
+            (
+                'longer',
+                Q(cooking_time__gt=limits[-1]),
+                f'{longer} {limits[-1]} мин.',
+            )
+        )
+
+    def lookups(self, request, model_admin):
+        qs = model_admin.get_queryset(request)
+        if self.intervals == []:
+            self._create_intervals()
+        aggregate_time = {
+            key: Count('id', filter=q) for key, q, _ in self.intervals
+        }
+        counts = qs.aggregate(**aggregate_time)
+
+        # подписи + (count)
+        return tuple(
+            (key, f'{label} ({counts.get(key, 0)})')
+            for key, _, label in self.intervals
+        )
+
+    def queryset(self, request, queryset):
+        for key, q, _ in self.intervals:
+            if self.value() == key:
+                return queryset.filter(q)
+        return queryset
+
+
+class HasRecipesFilter(admin.SimpleListFilter):
+    title = 'Есть рецепты'
+    parameter_name = 'has_recipes'
+
+    def lookups(self, request, model_admin):
+        return (('1', 'да'), ('0', 'нет'))
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val not in ('1', '0'):
+            return queryset
+        queryset = queryset.annotate(
+            _has_recipes=Exists(Recipe.objects.filter(author=OuterRef('pk')))
+        )
+        return queryset.filter(_has_recipes=(val == '1'))
+
+
+class HasFollowersFilter(admin.SimpleListFilter):
+    title = 'Есть подписчики'
+    parameter_name = 'has_followers'
+
+    def lookups(self, request, model_admin):
+        return (('1', 'да'), ('0', 'нет'))
+
+    def queryset(self, request, queryset):
+        val = self.value()
+        if val not in ('1', '0'):
+            return queryset
+        queryset = queryset.annotate(
+            _has_followers=Exists(
+                Subscription.objects.filter(author=OuterRef('pk'))
+            )
+        )
+        return queryset.filter(_has_followers=(val == '1'))
 
 
 class RecipesCountAdminMixin:
@@ -64,14 +164,26 @@ class RecipeIngredientInline(admin.TabularInline):
 @admin.register(Recipe)
 class RecipeAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
     list_select_related = ('author',)
-    list_display = ('name', 'author', 'favorites_count')
+    list_display = (
+        'id',
+        'name',
+        'cooking_time',
+        'author',
+        'tags_list',
+        'favorites_count',
+        'image_preview',
+    )
+    list_display_links = (
+        'name',
+        'id',
+    )
     search_fields = (
-        'name__search',
+        'name',
         'author__username',
         'tags__name',
-        'ingredients__name',
+        'ingredients_amounts__ingredient__name',
     )
-    list_filter = ('tags', 'author')
+    list_filter = ('tags', 'author', CookingTimeFilter)
     filter_horizontal = ('tags',)
     readonly_fields = ('favorites_count',)
 
@@ -80,6 +192,22 @@ class RecipeAdmin(RecipesCountAdminMixin, admin.ModelAdmin):
     @admin.display(description='В избранном')
     def favorites_count(self, recipe):
         return recipe.in_favorites.count()
+
+    @mark_safe
+    @admin.display(description='Превью изображения')
+    def image_preview(self, obj):
+        if obj.image:
+            return (
+                f'<a href="{obj.image.url}" target="_blank" rel="noopener">'
+                f'<img src="{obj.image.url}" style="height:60px; width:60px; '
+                f'object-fit:cover; border-radius:8px;" />'
+                f'</a>'
+            )
+        return '-'
+
+    @admin.display(description='Теги')
+    def tags_list(self, obj):
+        return ', '.join(obj.tags.values_list('name', flat=True))
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -108,7 +236,12 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         'first_name',
         'last_name',
     )
-
+    list_filter = (HasRecipesFilter, HasFollowersFilter)
+    list_display_links = (
+        'username',
+        'id',
+        'email',
+    )
     readonly_fields = ('avatar_preview',)
     recipes_count_lookup = 'recipes'
 
