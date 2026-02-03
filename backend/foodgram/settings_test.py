@@ -10,3 +10,5 @@ DATABASES = {
 }
 
 print('Using test settings with SQLite database.')
+DEBUG = False
+ALLOWED_HOSTS = ['testserver']
