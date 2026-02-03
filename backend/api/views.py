@@ -173,19 +173,34 @@ class RecipesViewSet(ModelViewSet):
             {'short-link': request.build_absolute_uri(f'/s/{pk}/')}
         )
 
-    @action(methods=['POST', 'DELETE'], detail=True, url_path='favorite')
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        url_path='favorite',
+        permission_classes=[IsAuthenticated],
+    )
     def favorite(self, request, pk=None):
         return self._manage_recipe_relation(
             request, pk, serializers.RecipeShortSerializer, Favorite
         )
 
-    @action(methods=['POST', 'DELETE'], detail=True, url_path='shopping_cart')
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        url_path='shopping_cart',
+        permission_classes=[IsAuthenticated],
+    )
     def shopping_cart(self, request, pk=None):
         return self._manage_recipe_relation(
             request, pk, serializers.RecipeShortSerializer, ShoppingCart
         )
 
-    @action(methods=['GET'], detail=False, url_path='download_shopping_cart')
+    @action(
+        methods=['GET'],
+        detail=False,
+        url_path='download_shopping_cart',
+        permission_classes=[IsAuthenticated],
+    )
     def download_shopping_cart(self, request):
         content, filename, content_type = build_shopping_cart_file(
             user=request.user,
