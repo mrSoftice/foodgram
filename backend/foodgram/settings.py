@@ -167,7 +167,7 @@ DJOSER = {
     },
 }
 
-USERNAME_PATTERN = r'^[\w.@+-]+\z'
+USERNAME_PATTERN = r'^[\w.@+-]+\Z'
 RECIPE_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 RECIPE_IMAGE_PATH = 'recipes/image'
 AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
