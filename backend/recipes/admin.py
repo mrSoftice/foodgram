@@ -272,7 +272,8 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         self, *, label: str, filter_key: str, user_id: int, value: int
     ):
         url = reverse(
-            f'admin:{Subscription._meta.app_label}_{Subscription._meta.model_name}_changelist'
+            f'admin:{Subscription._meta.app_label}_'
+            f'{Subscription._meta.model_name}_changelist'
         )
         query = urlencode({filter_key: user_id})
         return format_html('<a href="{}?{}">{}</a>', url, query, value)
