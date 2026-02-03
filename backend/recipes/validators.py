@@ -19,15 +19,15 @@ def username_validation(username):
     return username
 
 
-def no_repeating_id_in_list(value, field_name=''):
+def no_repeating_elements_in_list(value, list_name='', field_name='id'):
     dublicate_ids = [
         id
-        for id, count in Counter(item['id'] for item in value).items()
+        for id, count in Counter(item[field_name] for item in value).items()
         if count > 1
     ]
     if dublicate_ids:
         raise ValidationError(
-            f'Элементы в поле "{field_name}" повторятся элементы'
+            f'В поле "{list_name}" повторятся элементы'
             f'{", ".join(dublicate_ids)}'
         )
     return value

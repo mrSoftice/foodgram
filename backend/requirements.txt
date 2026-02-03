@@ -15,3 +15,4 @@ pytest-lazy-fixture==0.6.3
 pytils==0.4.1
 hashids
 PyYAML==6.0.3
+drf-extra-fields==3.7.0

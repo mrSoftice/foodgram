@@ -1,7 +1,6 @@
 import pytest
 
 from recipes.models import ShoppingCart
-from recipes.services.short_links import encode_hashid
 
 
 @pytest.mark.django_db
@@ -10,7 +9,8 @@ def test_get_link_returns_short_link(user_client, recipe1, get_short_link_url):
 
     assert response.status_code == 200
     assert response.data['short-link'] == (
-        f'http://testserver/s/{encode_hashid(recipe1.id)}'
+        # f'http://testserver/s/{encode_hashid(recipe1.id)}'
+        f'http://testserver/s/{recipe1.id}/'
     )
 
 

@@ -1,9 +1,22 @@
+from django.conf import settings
 from django.db.models import F, Sum
-from rest_framework.exceptions import ValidationError
+from django.utils import timezone as tz
 
-from foodgram.settings import SHOPPING_CART_FILENAME
-from recipes.models import RecipeIngredient
-from recipes.services import core
+from recipes.models import Recipe, RecipeIngredient
+
+SHOPPING_CART_FILENAME = getattr(
+    settings, 'SHOPPING_CART_FILENAME', 'shopping_cart'
+)
+
+
+def get_shopping_cart_recipes(user):
+    """Возвращает список рецептов пользователя из списка покупок"""
+    return (
+        Recipe.objects.filter(in_shoppingcarts__user=user)
+        .values('name', author_name=F('author__username'))
+        .distinct()
+        .order_by('name')
+    )
 
 
 def get_shopping_cart_ingredients(user):
@@ -12,7 +25,7 @@ def get_shopping_cart_ingredients(user):
         RecipeIngredient.objects.filter(recipe__in_shoppingcarts__user=user)
         .values(
             name=F('ingredient__name'),
-            measure_unit=F('measurement_unit__name'),
+            measurement_unit=F('ingredient__measurement_unit'),
         )
         .annotate(total_amount=Sum('amount'))
         .order_by('name')
@@ -21,66 +34,41 @@ def get_shopping_cart_ingredients(user):
 
 def render_as_txt(data):
     """Форматирует список ингредиентов в текстовый файл"""
-    lines = ['Ingredient - Total Amount - Measurement Unit']
-    lines += [
-        f'{item["name"]} - {item["total_amount"]} {item["measure_unit"]}'
-        for item in data
+    header = f'Список покупок на {tz.localdate()}:'
+    products_header = '№ - Наименование - Количество Единица измерения'
+    recipes_header = 'Рецепты в вашем списке покупок:'
+    products = [
+        f'{num} - {item["name"].capitalize()} - '
+        f'{item["total_amount"]} {item["measurement_unit"]}'
+        for num, item in enumerate(data['ingredients'], start=1)
     ]
-    return '\n'.join(lines)
-
-
-def render_as_csv(data):
-    """Форматирует список ингредиентов в CSV файл"""
-    import csv
-    from io import StringIO
-
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Ingredient', 'Total Amount', 'Measurement Unit'])
-    for item in data:
-        writer.writerow(
-            [
-                item['name'],
-                item['total_amount'],
-                item['measure_unit'],
-            ]
-        )
-    return output.getvalue()
-
-
-def render_as_json(data):
-    """Форматирует список ингредиентов в JSON файл"""
-    import json
-
-    result = [
-        {
-            'name': item['name'],
-            'amount': item['total_amount'],
-            'measurement_unit': item['measure_unit'],
-        }
-        for item in data
+    recipes = [
+        f'{recipe["name"].capitalize()} (автор: {recipe["author_name"]})'
+        for recipe in data['recipes']
     ]
-    return json.dumps(result, ensure_ascii=False, indent=2)
+
+    return '\n'.join(
+        [
+            header,
+            products_header,
+            *products,
+            '',
+            recipes_header,
+            *recipes,
+        ]
+    )
 
 
-_RENDERERS = {
-    'txt': (render_as_txt, 'text/plain; charset=utf-8'),
-    'csv': (render_as_csv, 'text/csv; charset=utf-8'),
-    'json': (render_as_json, 'application/json; charset=utf-8'),
-}
-
-
-def build_shopping_cart_file(*, user, file_format):
+def build_shopping_cart_file(*, user, file_format='txt'):
     """
     Возвращает (content, filename, content_type)
     или кидает ValidationError.
     """
-    renderer = _RENDERERS.get(file_format)
-    data = list(get_shopping_cart_ingredients(user))
-
-    if not data:
-        raise ValidationError(core.ERROR_EMPTY)
-
+    renderer = (render_as_txt, 'text/plain; charset=utf-8')
+    data = {
+        'ingredients': list(get_shopping_cart_ingredients(user)),
+        'recipes': list(get_shopping_cart_recipes(user)),
+    }
     render_fn, content_type = renderer
 
     content = render_fn(data)

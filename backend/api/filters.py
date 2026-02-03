@@ -17,11 +17,11 @@ class RecipeFilters(FilterSet):
     is_in_shopping_cart = NumberFilter(method='filter_is_in_shopping_cart')
     is_favorited = NumberFilter(method='filter_is_favorited')
 
-    def filter_tags(self, queryset, name, value):
+    def filter_tags(self, recipes, name, value):
         tags = self.request.query_params.getlist('tags')
         if tags:
-            return queryset.filter(tags__slug__in=tags).distinct()
-        return queryset
+            return recipes.filter(tags__slug__in=tags).distinct()
+        return recipes
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user

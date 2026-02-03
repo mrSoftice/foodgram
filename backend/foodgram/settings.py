@@ -2,7 +2,6 @@
 Django settings for Foodgram project.
 """
 
-import string
 from os import getenv
 from pathlib import Path
 
@@ -39,9 +38,6 @@ INSTALLED_APPS = [
     'recipes.apps.RecipesConfig',
 ]
 
-if DEBUG:
-    INSTALLED_APPS.append('debug_toolbar')
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -53,6 +49,7 @@ MIDDLEWARE = [
 ]
 
 if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
     MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'foodgram.urls'
@@ -136,6 +133,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/media'
+if DEBUG:
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 
 REST_FRAMEWORK = {
@@ -156,6 +155,11 @@ REST_FRAMEWORK = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': False,
+    'PERMISSIONS': {
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user_detail': ['rest_framework.permissions.AllowAny'],
+        'user': ['rest_framework.permissions.IsAuthenticated'],  # /users/me
+    },
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'user_create': 'api.serializers.UserCreateSerializer',
@@ -170,8 +174,8 @@ AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
 SHOPPING_CART_FILENAME = 'shopping_cart'
 SHOPPING_CART_FORMAT = 'txt'
-BASE62_ALPHABET = (
-    string.digits + string.ascii_lowercase + string.ascii_uppercase
-)
+COOKING_TIME_MIN_VALUE = 1
+COOKING_TIME_FILTERS = (10, 30, 60)
+COOKING_TIME_LONG_LABEL = 'дольше'
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']

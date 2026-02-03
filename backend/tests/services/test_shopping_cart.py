@@ -1,16 +1,11 @@
-﻿import json
-
-import pytest
-from rest_framework.exceptions import ValidationError
+﻿import pytest
+from django.utils import timezone as tz
 
 from foodgram.settings import SHOPPING_CART_FILENAME
 from recipes.models import ShoppingCart
-from recipes.services import core
 from recipes.services.shopping_cart import (
     build_shopping_cart_file,
     get_shopping_cart_ingredients,
-    render_as_csv,
-    render_as_json,
     render_as_txt,
 )
 
@@ -32,44 +27,45 @@ def test_get_shopping_cart_ingredients_aggregates_and_sorts(
     assert results == [
         {
             'name': 'Apple',
-            'measure_unit': 'g',
+            'measurement_unit': 'g',
             'total_amount': 150,
         },
         {
             'name': 'Banana',
-            'measure_unit': 'g',
+            'measurement_unit': 'g',
             'total_amount': 1,
         },
     ]
 
 
-def test_render_as_txt():
-    data = [
-        {'name': 'Sugar', 'total_amount': 10, 'measure_unit': 'g'},
-        {'name': 'Salt', 'total_amount': 1, 'measure_unit': 'g'},
-    ]
-    expected = 'Ingredient - Total Amount - Measurement Unit'
-    '\nSugar - 10 g\nSalt - 1 g'
+def test_render_as_txt(recipe1, recipe2):
+    header = f'Список покупок на {tz.localdate()}:'
+    products_header = '№ - Наименование - Количество Единица измерения'
+    recipes_header = 'Рецепты в вашем списке покупок:'
+
+    data = {
+        'ingredients': [
+            {'name': 'Sugar', 'total_amount': 10, 'measurement_unit': 'g'},
+            {'name': 'Salt', 'total_amount': 1, 'measurement_unit': 'g'},
+        ],
+        'recipes': [
+            {'name': 'Recipe 1', 'author_name': 'User2'},
+            {'name': 'Recipe 2', 'author_name': 'User2'},
+        ],
+    }
+    expected = '\n'.join(
+        [
+            header,
+            products_header,
+            '1 - Sugar - 10 g',
+            '2 - Salt - 1 g',
+            '',
+            recipes_header,
+            'Recipe 1 (автор: User2)',
+            'Recipe 2 (автор: User2)',
+        ]
+    )
     assert render_as_txt(data) == expected
-
-
-def test_render_as_csv():
-    data = [
-        {'name': 'Sugar', 'total_amount': 10, 'measure_unit': 'g'},
-    ]
-    result = render_as_csv(data).splitlines()
-    assert result[0] == 'Ingredient,Total Amount,Measurement Unit'
-    assert result[1] == 'Sugar,10,g'
-
-
-def test_render_as_json():
-    data = [
-        {'name': 'Sugar', 'total_amount': 10, 'measure_unit': 'g'},
-    ]
-    payload = render_as_json(data)
-    assert json.loads(payload) == [
-        {'name': 'Sugar', 'amount': 10, 'measurement_unit': 'g'}
-    ]
 
 
 @pytest.mark.django_db
@@ -77,8 +73,6 @@ def test_render_as_json():
     'file_format, expected_content_type',
     [
         ('txt', 'text/plain; charset=utf-8'),
-        ('csv', 'text/csv; charset=utf-8'),
-        ('json', 'application/json; charset=utf-8'),
     ],
 )
 def test_build_shopping_cart_file_returns_content_filename_and_type(
@@ -100,36 +94,21 @@ def test_build_shopping_cart_file_returns_content_filename_and_type(
     assert content_type == expected_content_type
 
     # Содержимое проверяем по формату
+    header = f'Список покупок на {tz.localdate()}:'
+    products_header = '№ - Наименование - Количество Единица измерения'
+    recipes_header = 'Рецепты в вашем списке покупок:'
+
     if file_format == 'txt':
         assert content.splitlines() == [
-            'Ingredient - Total Amount - Measurement Unit',
-            'Apple - 150 g',
-            'Banana - 1 g',
+            header,
+            products_header,
+            '1 - Apple - 150 g',
+            '2 - Banana - 1 g',
+            '',
+            recipes_header,
+            'Recipe 1 (автор: user2)',
+            'Recipe 2 (автор: user2)',
         ]
-    elif file_format == 'csv':
-        lines = content.splitlines()
-        assert lines[0] == 'Ingredient,Total Amount,Measurement Unit'
-        assert lines[1] == 'Apple,150,g'
-        assert lines[2] == 'Banana,1,g'
-
-    elif file_format == 'json':
-        assert json.loads(content) == [
-            {'name': 'Apple', 'amount': 150, 'measurement_unit': 'g'},
-            {'name': 'Banana', 'amount': 1, 'measurement_unit': 'g'},
-        ]
-
-
-@pytest.mark.django_db
-def test_build_shopping_cart_file_raises_validation_error_on_empty_cart(
-    author,
-):
-    # У author нет позиций в shopping cart
-    with pytest.raises(ValidationError) as exc_info:
-        build_shopping_cart_file(user=author, file_format='txt')
-
-    # Не привязываемся к структуре detail (может быть list/dict/ErrorDetail),
-    # но убеждаемся, что текст 'пустой список' присутствует.
-    assert core.ERROR_EMPTY['errors'] in str(exc_info.value.detail)
 
 
 @pytest.mark.django_db
