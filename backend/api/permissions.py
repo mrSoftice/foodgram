@@ -2,14 +2,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorOrReadOnly(BasePermission):
-    """Доступ на Чтение для всех, Изменение доступно только авторам.
-
-    - SAFE_METHODS (GET, HEAD, OPTIONS) разрешены для всех запросов.
-    - POST разрешены только аутентифицированным пользователям.
-    - PUT/PATCH/DELETE разрешены только авторам рецептов.
-    """
+    """Доступ на Чтение для всех, Изменение доступно только авторам."""
 
     def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        return obj.author == request.user
+        return (request.method in SAFE_METHODS) or obj.author == request.user

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
@@ -30,7 +29,8 @@ from recipes.services.shopping_cart import build_shopping_cart_file
 
 User = get_user_model()
 
-SHOPPING_CART_FORMAT = getattr(settings, 'SHOPPING_CART_FORMAT', 'txt')
+ERROR_RECIPE_IN_LIST = {'detail': 'Рецепт {recipe} уже есть в {list}.'}
+ERROR_ALREADY_SUBSCRIBED = {'detail': 'Вы уже подписаны на  автора {author}.'}
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -129,9 +129,7 @@ class UserViewSet(DjoserUserViewSet):
         )
         if not created:
             raise ValidationError(
-                core.format_error(
-                    core.ERROR_ALREADY_SUBSCRIBED, author=author.username
-                )
+                ERROR_ALREADY_SUBSCRIBED.format(author=author.username)
             )
 
     def _unsubscribe(self, user, author_id):
@@ -204,9 +202,7 @@ class RecipesViewSet(ModelViewSet):
     def download_shopping_cart(self, request):
         content, filename, content_type = build_shopping_cart_file(
             user=request.user,
-            file_format=request.query_params.get(
-                'file_format', SHOPPING_CART_FORMAT
-            ),
+            file_format=request.query_params.get('file_format', 'txt'),
         )
         response = HttpResponse(content, content_type=content_type)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -274,8 +270,7 @@ class RecipesViewSet(ModelViewSet):
         )
         if not created:
             raise ValidationError(
-                core.format_error(
-                    core.ERROR_RECIPE_IN_LIST,
+                ERROR_RECIPE_IN_LIST.format(
                     recipe=recipe.name,
                     list=relation_model.__name__,
                 )

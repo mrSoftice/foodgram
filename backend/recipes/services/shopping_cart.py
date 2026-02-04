@@ -1,19 +1,16 @@
-from django.conf import settings
 from django.db.models import F, Sum
 from django.utils import timezone as tz
 
 from recipes.models import Recipe, RecipeIngredient
 
-SHOPPING_CART_FILENAME = getattr(
-    settings, 'SHOPPING_CART_FILENAME', 'shopping_cart'
-)
+SHOPPING_CART_FILENAME = 'shopping_cart'
+SHOPPING_CART_FORMAT = 'txt'
 
 
 def get_shopping_cart_recipes(user):
     """Возвращает список рецептов пользователя из списка покупок"""
     return (
-        Recipe.objects.filter(in_shoppingcarts__user=user)
-        .values('name', author_name=F('author__username'))
+        Recipe.objects.filter(shoppingcarts__user=user)
         .distinct()
         .order_by('name')
     )
@@ -22,7 +19,7 @@ def get_shopping_cart_recipes(user):
 def get_shopping_cart_ingredients(user):
     """Возвращает список ингредиентов пользователя из списка покупок"""
     return (
-        RecipeIngredient.objects.filter(recipe__in_shoppingcarts__user=user)
+        RecipeIngredient.objects.filter(recipe__shoppingcarts__user=user)
         .values(
             name=F('ingredient__name'),
             measurement_unit=F('ingredient__measurement_unit'),
@@ -43,7 +40,7 @@ def render_as_txt(data):
         for num, item in enumerate(data['ingredients'], start=1)
     ]
     recipes = [
-        f'{recipe["name"].capitalize()} (автор: {recipe["author_name"]})'
+        f'{recipe.name.capitalize()} (автор: {recipe.author.username})'
         for recipe in data['recipes']
     ]
 
@@ -64,13 +61,11 @@ def build_shopping_cart_file(*, user, file_format='txt'):
     Возвращает (content, filename, content_type)
     или кидает ValidationError.
     """
-    renderer = (render_as_txt, 'text/plain; charset=utf-8')
-    data = {
-        'ingredients': list(get_shopping_cart_ingredients(user)),
-        'recipes': list(get_shopping_cart_recipes(user)),
-    }
-    render_fn, content_type = renderer
-
-    content = render_fn(data)
+    content = render_as_txt(
+        {
+            'ingredients': get_shopping_cart_ingredients(user),
+            'recipes': get_shopping_cart_recipes(user),
+        }
+    )
     filename = f'{SHOPPING_CART_FILENAME}.{file_format}'
-    return content, filename, content_type
+    return content, filename, 'text/plain;'

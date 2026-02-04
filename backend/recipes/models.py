@@ -5,10 +5,8 @@ from django.db import models
 
 import recipes.constants as const
 
-AVATAR_IMAGE_PATH = getattr(settings, 'AVATAR_IMAGE_PATH', '')
 RECIPE_IMAGE_PATH = getattr(settings, 'RECIPE_IMAGE_PATH', '')
 USERNAME_PATTERN = getattr(settings, 'USERNAME_PATTERN', r'^[\w.@+-]+\z')
-COOKING_TIME_MIN_VALUE = getattr(settings, 'COOKING_TIME_MIN_VALUE', 1)
 
 
 class User(AbstractUser):
@@ -36,7 +34,10 @@ class User(AbstractUser):
         null=False,
     )
     avatar = models.ImageField(
-        upload_to=AVATAR_IMAGE_PATH, null=True, blank=True, default=None
+        upload_to=settings.AVATAR_IMAGE_PATH,
+        null=True,
+        blank=True,
+        default=None,
     )
 
     USERNAME_FIELD = 'email'
@@ -79,13 +80,13 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         default_related_name = 'ingredients'
+        ordering = ('name',)
         constraints = [
             models.UniqueConstraint(
                 fields=['name', 'measurement_unit'],
                 name='unique_name_measurement_unit_in_Ingredient',
             )
         ]
-        unique_together = ('name', 'measurement_unit')
 
     def __str__(self):
         return f'{self.name} ({self.measurement_unit})'
@@ -103,10 +104,12 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
+        related_name='recipes',
+        verbose_name='Ингредиенты',
     )
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления, мин',
-        validators=(MinValueValidator(COOKING_TIME_MIN_VALUE),),
+        validators=(MinValueValidator(const.COOKING_TIME_MIN_VALUE),),
     )
     image = models.ImageField(
         upload_to=RECIPE_IMAGE_PATH,
@@ -127,19 +130,17 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='ingredients_amounts'
-    )
-    ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.CASCADE, related_name='in_recipes'
-    )
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(
-        verbose_name='Количество', validators=[MinValueValidator(1)]
+        verbose_name='Количество',
+        validators=[MinValueValidator(const.COOKING_TIME_MIN_VALUE)],
     )
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецептах'
+        default_related_name = 'ingredients_amounts'
         constraints = [
             models.UniqueConstraint(
                 fields=['recipe', 'ingredient'],
@@ -151,15 +152,12 @@ class RecipeIngredient(models.Model):
 class UserRecipeRelation(models.Model):
     """Связь user <-> recipe (избранное/корзина и т.п.)."""
 
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='%(class)s_items'
-    )
-    recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='in_%(class)ss'
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
     class Meta:
         abstract = True
+        default_related_name = 'in_%(class)ss'
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
@@ -172,14 +170,16 @@ class UserRecipeRelation(models.Model):
 
 
 class Favorite(UserRecipeRelation):
-    class Meta:
+    class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
         default_related_name = 'favorites'
 
 
 class ShoppingCart(UserRecipeRelation):
-    class Meta:
+    class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Список покупок'
+        verbose_name_plural = 'Списки покупок'
         default_related_name = 'shoppingcarts'
 
 

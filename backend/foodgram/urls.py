@@ -4,15 +4,16 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
-MEDIA_URL = getattr(settings, 'MEDIA_URL', '/media/')
-MEDIA_ROOT = getattr(settings, 'MEDIA_ROOT', 'media/')
+MEDIA_URL = settings.MEDIA_URL
+MEDIA_ROOT = settings.MEDIA_ROOT
 
 app_name = 'foodgram'
 
 urlpatterns = [
     path('api/', include('api.urls')),
     path('admin/', admin.site.urls, name='admin'),
-    path('s/<int:recipe_id>/', include('recipes.urls')),
+    # path('s/<int:recipe_id>/', include('recipes.urls')),
+    path('', include('recipes.urls')),
 ]
 
 

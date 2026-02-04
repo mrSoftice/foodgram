@@ -1,6 +1,5 @@
 from collections import Counter
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -8,10 +7,10 @@ from drf_extra_fields.relations import PresentableSlugRelatedField
 from rest_framework import serializers
 
 from recipes import validators
+from recipes.constants import COOKING_TIME_MIN_VALUE
 from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from recipes.validators import username_validation
 
-COOKING_TIME_MIN_VALUE = getattr(settings, 'COOKING_TIME_MIN_VALUE', 1)
 User = get_user_model()
 
 
@@ -203,9 +202,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        recipe = Recipe.objects.create(
-            author=self.context['request'].user, **validated_data
-        )
+        validated_data['author'] = self.context['request'].user
+        recipe = super().create(validated_data)
         recipe.tags.set(tags, clear=True)
         self.create_ingredients(ingredients, recipe)
         return recipe
@@ -214,14 +212,15 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        instance = super().update(instance, validated_data)
 
-        instance.tags.set(tags, clear=True)
-        instance.ingredients_amounts.all().delete()
-        self.create_ingredients(ingredients, instance)
+        if tags is not None:
+            instance.tags.set(tags)
 
-        instance.save()
+        if ingredients is not None:
+            instance.ingredients_amounts.all().delete()
+            self.create_ingredients(ingredients, instance)
+
         return instance
 
     def to_representation(self, instance):
@@ -265,8 +264,17 @@ class SubscribedAuthorSerializer(UserSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes_limit = request.GET.get('recipes_limit')
         recipes = obj.recipes.all()
-        if recipes_limit is not None and recipes_limit.isdigit():
-            recipes = recipes[: int(recipes_limit)]
+
+        recipes_limit = request.GET.get('recipes_limit')
+        if recipes_limit is None:
+            return RecipeShortSerializer(recipes, many=True).data
+        try:
+            limit = int(recipes_limit)
+        except (TypeError, ValueError):
+            raise serializers.ValidationError(
+                {'recipes_limit': 'recipes_limit должен быть целым числом.'}
+            )
+
+        recipes = recipes[:limit]
         return RecipeShortSerializer(recipes, many=True).data
