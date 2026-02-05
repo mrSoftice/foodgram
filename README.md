@@ -14,7 +14,6 @@
 Перед запуском необходимо склонировать проект:
 ```bash
 HTTPS: git clone https://github.com/mrSoftice/foodgram.git
-SSH: git clone git@github.com:mrSoftice/foodgram.git
 ```
 
 Cоздать и активировать виртуальное окружение:
@@ -74,9 +73,11 @@ docker-compose up -d
 
 **При запуске контейнеров будет атоматически выполнен сбор статики и выполнены миграции**
 
-Создать суперюзера (Администратора):
+Создать суперюзера (Администратора) и загрузить список продуктов и тегов:
 ```bash
 docker-compose exec backend python manage.py createsuperuser
+docker-compose exec backend python manage.py load_ingredients
+docker-compose exec backend python manage.py load_tags
 ```
 
 После запуска проекта будет доступены адреса
@@ -88,6 +89,10 @@ docker-compose exec backend python manage.py createsuperuser
 ---
 ### 2.3 Локальный запуск проекта <a id=23></a>
 
+Перед запуском необходимо склонировать проект:
+```bash
+HTTPS: git clone https://github.com/mrSoftice/foodgram.git
+```
 
 Установить зависимости из файла requirements.txt:
 
@@ -102,9 +107,11 @@ pip install -r requirements.txt
 python3 manage.py migrate
 ```
 
-Создать суперюзера (Администратора):
+Создать суперюзера (Администратора) и загрузить список продуктов и тегов:
 ```bash
 python manage.py createsuperuser
+python manage.py load_ingredients
+python manage.py load_tags
 ```
 
 Запустить проект:
@@ -118,41 +125,17 @@ python3 manage.py runserver
 - [Документация в формате **ReDoc**](http://localhost:8000/api/docs/)
 
 ---
-
-## 3. Заполнение базы данных <a id=3></a>
-
-С проектом поставляются данные об ингредиентах и тегах.
-
-Заполнить базу данных можно выполнив следующме команды
-
-Для загрузки готового списка ингредиентов и тегов:
-
-**если проект запущен в docker**:
-из папки "./infra/":
-```bash
-docker-compose exec backend python manage.py load_ingredients
-docker-compose exec backend python manage.py load_tags
-
-```
-
-**Если проект запущен локально**:
-```bash
-python manage.py load_ingredients
-python manage.py load_tags
-
-```
-
 Подробную информацию по всем функциям API можно получить после запуска проекта в формате **Redoc** по адресу [ReDoc](http://localhost:8000/api/docs/) или из файла [project folder\docs\openapi-schema.yml](./docs/openapi-schema.yml)
 
 
 ## 4. Технологический стек <a id=4></a>
--	Python 3
--	Django
--	Django Rest Framework
--   Djoser
--   PostgreSQL
--	React
--	Docker
+- Python 3
+- Django
+- Django Rest Framework
+- Djoser
+- PostgreSQL
+- React
+- Docker
 
 
 ## 5. Разработчики <a id=5></a>

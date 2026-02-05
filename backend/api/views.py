@@ -11,7 +11,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-import recipes.services.shopping_cart as sc
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
 from recipes.models import (
@@ -23,6 +22,11 @@ from recipes.models import (
     Tag,
 )
 from recipes.services import subscriptions
+from recipes.services.shopping_cart import (
+    get_shopping_cart_ingredients,
+    get_shopping_cart_recipes,
+    render_as_txt,
+)
 
 User = get_user_model()
 
@@ -78,7 +82,7 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         return self.get_paginated_response(
-            serializers.FollowedAuthorWithRecipesSerializer(
+            serializers.AuthorWithRecipesSerializer(
                 self.paginate_queryset(
                     User.objects.filter(authors__user=request.user)
                 ),
@@ -108,7 +112,7 @@ class UserViewSet(DjoserUserViewSet):
                 }
             )
         return Response(
-            serializers.FollowedAuthorWithRecipesSerializer(
+            serializers.AuthorWithRecipesSerializer(
                 author, context={'request': request}
             ).data,
             status=status.HTTP_201_CREATED,
@@ -148,9 +152,7 @@ class RecipesViewSet(ModelViewSet):
         return Response(
             {
                 'short-link': request.build_absolute_uri(
-                    reverse(
-                        'recipes:short-link-view', kwargs={'recipe_id': pk}
-                    )
+                    reverse('recipes:short-link-view', args=[pk])
                 )
             }
         )
@@ -162,9 +164,7 @@ class RecipesViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk=None):
-        return self._manage_recipe_relation(
-            request, pk, serializers.RecipeShortSerializer, Favorite
-        )
+        return self._manage_recipe_relation(request, pk, Favorite)
 
     @action(
         methods=['POST', 'DELETE'],
@@ -173,9 +173,7 @@ class RecipesViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk=None):
-        return self._manage_recipe_relation(
-            request, pk, serializers.RecipeShortSerializer, ShoppingCart
-        )
+        return self._manage_recipe_relation(request, pk, ShoppingCart)
 
     @action(
         methods=['GET'],
@@ -184,19 +182,17 @@ class RecipesViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        content = sc.render_as_txt(
-            {
-                'ingredients': sc.get_shopping_cart_ingredients(request.user),
-                'recipes': sc.get_shopping_cart_recipes(request.user),
-            }
-        )
-        response = FileResponse(
-            content,
+        return FileResponse(
+            render_as_txt(
+                {
+                    'ingredients': get_shopping_cart_ingredients(request.user),
+                    'recipes': get_shopping_cart_recipes(request.user),
+                }
+            ),
             as_attachment=True,
             content_type='text/plain;',
             filename='shopping_cart.txt',
         )
-        return response
 
     def get_queryset(self):
         user = self.request.user
@@ -223,9 +219,7 @@ class RecipesViewSet(ModelViewSet):
             return serializers.RecipeReadSerializer
         return serializers.RecipeWriteSerializer
 
-    def _manage_recipe_relation(
-        self, request, recipe_id, serializer_class, relation_model
-    ):
+    def _manage_recipe_relation(self, request, recipe_id, relation_model):
         if request.method == 'DELETE':
             get_object_or_404(
                 relation_model,
@@ -248,7 +242,7 @@ class RecipesViewSet(ModelViewSet):
                 }
             )
         return Response(
-            serializer_class(
+            serializers.RecipeShortSerializer(
                 recipe,
                 context={'request': request},
             ).data,

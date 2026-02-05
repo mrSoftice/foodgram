@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 
-from recipes.constants import COOKING_TIME_FILTERS
 from recipes.models import (
     Favorite,
     Ingredient,
@@ -22,22 +21,21 @@ class CookingTimeFilter(admin.SimpleListFilter):
     title = 'Время приготовления'
     parameter_name = 'cooking_time'
 
+    COOKING_TIME_FILTERS = {
+        'до 10 мин': (0, 10),
+        '10-30 мин': (11, 30),
+        '30-60 мин': (31, 60),
+        'более 60 мин': (61, 999_999_999),
+    }
     alias_map = {
         f't{t0}_{t1}': label
         for label, (t0, t1) in COOKING_TIME_FILTERS.items()
     }
     filter_expressions = {
-        f't{t0}_{t1}': (
-            Q(cooking_time__lte=t1)
-            if t0 == 0
-            else Q(cooking_time__gt=t0)
-            if t1 == 0
-            else Q(cooking_time__gt=t0, cooking_time__lte=t1)
-        )
-        for (t0, t1) in COOKING_TIME_FILTERS.values()
+        f't{t0}_{t1}': (t0, t1) for (t0, t1) in COOKING_TIME_FILTERS.values()
     }
     aggregate_time = {
-        key: Count('id', filter=q_exp)
+        key: Count('id', filter=Q(cooking_time__range=q_exp))
         for key, q_exp in filter_expressions.items()
     }
 
@@ -52,69 +50,78 @@ class CookingTimeFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, recipes):
-        if self.value() is None:
-            return recipes
-        return recipes.filter(self.filter_expressions[self.value()])
+        if self.value() in self.filter_expressions:
+            return recipes.filter(
+                cooking_time__range=self.filter_expressions[self.value()]
+            )
+        return recipes
 
 
-class HasRecipesFilter(admin.SimpleListFilter):
-    title = 'Есть рецепты'
-    parameter_name = 'has_recipes'
+class YesNoFilter(admin.SimpleListFilter):
+    title = None
+    parameter_name = None
     lookup_choices = (('1', 'да'), ('0', 'нет'))
+
+    filter_field = None
+    yes_lookup = 'gt'
+    no_lookup = 'exact'
 
     def lookups(self, request, model_admin):
         return self.lookup_choices
 
     def queryset(self, request, queryset):
+        if not self.filter_field:
+            raise ValueError('Необходимо задать filter_field в фильтре.')
+
         val = self.value()
         if val == '1':
-            return queryset.filter(recipes_count__gt=0)
+            return queryset.filter(
+                **{f'{self.filter_field}__{self.yes_lookup}': 0}
+            )
         if val == '0':
-            return queryset.filter(recipes_count=0)
+            return queryset.filter(
+                **{f'{self.filter_field}__{self.no_lookup}': 0}
+            )
         return queryset
 
 
-class IsInRecipesFilter(admin.SimpleListFilter):
+class HasRecipesFilter(YesNoFilter):
+    title = 'Есть рецепты'
+    parameter_name = 'has_recipes'
+
+    filter_field = 'recipes_count'
+
+
+class IsInRecipesFilter(YesNoFilter):
     title = 'Есть в рецептах'
     parameter_name = 'is_in_recipes'
     lookup_choices = (('1', 'да'), ('0', 'нет'))
 
-    def lookups(self, request, model_admin):
-        return self.lookup_choices
-
-    def queryset(self, request, queryset):
-        val = self.value()
-        if val == '1':
-            return queryset.filter(recipes_count__gt=0)
-        if val == '0':
-            return queryset.filter(recipes_count=0)
-        return queryset
+    filter_field = 'recipes_count'
 
 
-class HasSubscribersFilter(admin.SimpleListFilter):
+class HasSubscribersFilter(YesNoFilter):
     title = 'Есть подписчики'
     parameter_name = 'has_followers'
-    lookup_choices = (('1', 'да'), ('0', 'нет'))
 
-    def lookups(self, request, model_admin):
-        return self.lookup_choices
+    filter_field = 'subscribers_total'
 
-    def queryset(self, request, queryset):
-        val = self.value()
-        if val == '1':
-            return queryset.filter(subscribers_total__gt=0)
-        if val == '0':
-            return queryset.filter(subscribers_total=0)
-        return queryset
+
+class HasSubscriptionsFilter(YesNoFilter):
+    title = 'Есть подписки'
+    parameter_name = 'has_subscriptions'
+
+    filter_field = 'subscriptions_total'
 
 
 class RecipesCountAdminMixin:
     list_display = ('recipes_count',)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.annotate(
-            **{'recipes_count': Count('recipes', distinct=True)}
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(**{'recipes_count': Count('recipes', distinct=True)})
         )
 
     @admin.display(description='рецептов')
@@ -192,23 +199,25 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @mark_safe
     @admin.display(description='Изображение')
-    def image_preview(self, obj):
-        if obj.image:
+    def image_preview(self, recipe):
+        if recipe.image:
             return (
-                f'<a href="{obj.image.url}" target="_blank" rel="noopener">'
-                f'<img src="{obj.image.url}" style="height:60px; width:60px; '
+                f'<a href="{recipe.image.url}" target="_blank" rel="noopener">'
+                f'<img src="{recipe.image.url}" style="height:60px;width:60px;'
                 f'object-fit:cover; border-radius:8px;" />'
                 f'</a>'
             )
         return '-'
 
+    @mark_safe
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
-        return '\n'.join(recipe.ingredients.values_list('name', flat=True))
+        return '<br>'.join(recipe.ingredients.values_list('name', flat=True))
 
+    @mark_safe
     @admin.display(description='Теги')
     def tags_list(self, recipe):
-        return '\n'.join(recipe.tags.values_list('name', flat=True))
+        return '<br>'.join(recipe.tags.values_list('name', flat=True))
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -237,7 +246,11 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         'first_name',
         'last_name',
     )
-    list_filter = (HasRecipesFilter, HasSubscribersFilter)
+    list_filter = (
+        HasRecipesFilter,
+        HasSubscribersFilter,
+        HasSubscriptionsFilter,
+    )
     list_display_links = (
         'username',
         'id',
@@ -258,11 +271,11 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
 
     @mark_safe
     @admin.display(description='Аватар')
-    def avatar_preview(self, obj):
-        if obj.avatar:
+    def avatar_preview(self, user):
+        if user.avatar:
             return (
-                f'<a href="{obj.avatar.url}" target="_blank" rel="noopener">'
-                f'<img src="{obj.avatar.url}" style="height:40px; width:40px; '
+                f'<a href="{user.avatar.url}" target="_blank" rel="noopener">'
+                f'<img src="{user.avatar.url}" style="height:40px;width:40px;'
                 f'object-fit:cover; border-radius:50%;" />'
                 f'</a>'
             )
@@ -280,21 +293,21 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         return f'<a href="{url}?{query}">{value} {label}</a>'
 
     @admin.display(description='Подписок', ordering='subscriptions_total')
-    def subscriptions_count(self, obj):
+    def subscriptions_count(self, user):
         return self._subscription_changelist_link(
             label='Подписок',
             filter_key='user__id__exact',  # user = obj (на кого подписан)
-            user_id=obj.id,
-            value=obj.subscriptions_total,
+            user_id=user.id,
+            value=user.subscriptions_total,
         )
 
     @admin.display(description='Подписчиков', ordering='subscribers_total')
-    def subscribers_count(self, obj):
+    def subscribers_count(self, user):
         return self._subscription_changelist_link(
             label='Подписчиков',
             filter_key='author__id__exact',  # author = obj (кто подписан)
-            user_id=obj.id,
-            value=obj.subscribers_total,
+            user_id=user.id,
+            value=user.subscribers_total,
         )
 
 

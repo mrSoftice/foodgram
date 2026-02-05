@@ -229,5 +229,6 @@ jobs:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.HOMEWORK_BOT_TOKEN }}
         message: |
-          ${{ github.actor }} сделал коммит ${{ github.event.commits[0].message }} в репозиторий ${{ github.repository }}.
+          ${{ github.actor }} сделал коммит ${{ github.event.commits[0].message }}
+           в репозиторий ${{ github.repository }}.
           Workflow ${{ github.workflow }} успешно выполнен!

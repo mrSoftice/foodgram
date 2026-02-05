@@ -4,7 +4,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes import validators
-from recipes.constants import INGREDIENT_MIN_AMOUNT
+from recipes.constants import COOKING_TIME_MIN_VALUE, INGREDIENT_MIN_AMOUNT
 from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 
 User = get_user_model()
@@ -17,7 +17,8 @@ class UserSerializer(DjoserUserSerializer):
 
     class Meta:
         model = User
-        fields = DjoserUserSerializer.Meta.fields + (
+        fields = (
+            *DjoserUserSerializer.Meta.fields,
             'is_subscribed',
             'avatar',
         )
@@ -66,7 +67,7 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientWriteSerializer(serializers.Serializer):
-    """Сериализатор для добавления ингредиентов в рецепт."""
+    """Сериализатор для добавления и обновления ингредиентов в рецепте."""
 
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     amount = serializers.IntegerField(min_value=INGREDIENT_MIN_AMOUNT)
@@ -110,6 +111,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         many=True, queryset=Tag.objects.all()
     )
     image = Base64ImageField(required=True, allow_null=False)
+    cooking_time = serializers.IntegerField(min_value=COOKING_TIME_MIN_VALUE)
 
     class Meta:
         model = Recipe
@@ -162,17 +164,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-
-        instance = super().update(instance, validated_data)
-
-        if tags is not None:
-            instance.tags.set(tags)
-
-        if ingredients is not None:
-            instance.ingredients_amounts.all().delete()
-            self.create_ingredients(ingredients, instance)
-
-        return instance
+        instance.tags.set(tags)
+        instance.ingredients_amounts.all().delete()
+        self.create_ingredients(ingredients, instance)
+        return super().update(instance, validated_data)
 
     def to_representation(self, instance):
         return RecipeReadSerializer(
@@ -194,7 +189,7 @@ class RecipeShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class FollowedAuthorWithRecipesSerializer(UserSerializer):
+class AuthorWithRecipesSerializer(UserSerializer):
     """
     Возвращает информацию об авторах и их рецептах
     на которых подписан текущий пользователь.
@@ -219,7 +214,7 @@ class FollowedAuthorWithRecipesSerializer(UserSerializer):
 
         recipes_limit = request.GET.get('recipes_limit')
         if recipes_limit is None:
-            return RecipeShortSerializer(recipes, many=True).data
+            recipes_limit = 0
         try:
             limit = int(recipes_limit)
         except (TypeError, ValueError):
@@ -227,5 +222,4 @@ class FollowedAuthorWithRecipesSerializer(UserSerializer):
                 {'recipes_limit': 'recipes_limit должен быть целым числом.'}
             )
 
-        recipes = recipes[:limit]
-        return RecipeShortSerializer(recipes, many=True).data
+        return RecipeShortSerializer(recipes[:limit], many=True).data

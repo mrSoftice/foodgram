@@ -5,8 +5,8 @@ from django.db import models
 
 import recipes.constants as const
 
-RECIPE_IMAGE_PATH = getattr(settings, 'RECIPE_IMAGE_PATH', '')
-USERNAME_PATTERN = getattr(settings, 'USERNAME_PATTERN', r'^[\w.@+-]+\z')
+RECIPE_IMAGE_PATH = settings.RECIPE_IMAGE_PATH
+USERNAME_PATTERN = settings.USERNAME_PATTERN
 
 
 class User(AbstractUser):
@@ -105,7 +105,6 @@ class Recipe(models.Model):
         Ingredient,
         through='RecipeIngredient',
         related_name='recipes',
-        verbose_name='Ингредиенты',
     )
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления, мин',
@@ -157,7 +156,7 @@ class UserRecipeRelation(models.Model):
 
     class Meta:
         abstract = True
-        default_related_name = 'in_%(class)ss'
+        default_related_name = '%(class)ss'
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
@@ -173,14 +172,12 @@ class Favorite(UserRecipeRelation):
     class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
-        default_related_name = 'favorites'
 
 
 class ShoppingCart(UserRecipeRelation):
     class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'
-        default_related_name = 'shoppingcarts'
 
 
 class Subscription(models.Model):

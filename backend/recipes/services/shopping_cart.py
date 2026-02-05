@@ -54,18 +54,3 @@ def render_as_txt(data):
             *recipes,
         ]
     )
-
-
-def build_shopping_cart_file(*, user, file_format='txt'):
-    """
-    Возвращает (content, filename, content_type)
-    или кидает ValidationError.
-    """
-    content = render_as_txt(
-        {
-            'ingredients': get_shopping_cart_ingredients(user),
-            'recipes': get_shopping_cart_recipes(user),
-        }
-    )
-    filename = f'{SHOPPING_CART_FILENAME}.{file_format}'
-    return content, filename, 'text/plain;'

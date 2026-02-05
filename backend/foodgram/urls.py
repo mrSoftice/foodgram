@@ -12,7 +12,6 @@ app_name = 'foodgram'
 urlpatterns = [
     path('api/', include('api.urls')),
     path('admin/', admin.site.urls, name='admin'),
-    # path('s/<int:recipe_id>/', include('recipes.urls')),
     path('', include('recipes.urls')),
 ]
 
