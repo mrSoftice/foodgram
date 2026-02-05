@@ -1,20 +1,17 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import (
-    NotAuthenticated,
-    NotFound,
-    ValidationError,
-)
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+import recipes.services.shopping_cart as sc
 from api import filters, pagination, serializers
 from api.permissions import IsAuthorOrReadOnly
 from recipes.models import (
@@ -25,12 +22,12 @@ from recipes.models import (
     Subscription,
     Tag,
 )
-from recipes.services import core, subscriptions
-from recipes.services.shopping_cart import build_shopping_cart_file
+from recipes.services import subscriptions
 
 User = get_user_model()
 
-SHOPPING_CART_FORMAT = getattr(settings, 'SHOPPING_CART_FORMAT', 'txt')
+ERROR_RECIPE_IN_LIST = 'Рецепт {recipe} уже есть в {list}.'
+ERROR_ALREADY_SUBSCRIBED = 'Вы уже подписаны на  автора {author}.'
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -81,7 +78,7 @@ class UserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         return self.get_paginated_response(
-            serializers.SubscribedAuthorSerializer(
+            serializers.FollowedAuthorWithRecipesSerializer(
                 self.paginate_queryset(
                     User.objects.filter(authors__user=request.user)
                 ),
@@ -98,13 +95,20 @@ class UserViewSet(DjoserUserViewSet):
     def subscribe(self, request, id=None):
         author = get_object_or_404(User, id=id)
 
-        try:
-            self._subscribe(request.user, author)
-        except (ValidationError, NotAuthenticated) as e:
-            return Response(e.detail, status=e.status_code)
-
+        _, created = Subscription.objects.get_or_create(
+            user=request.user,
+            author=author,
+        )
+        if not created:
+            raise ValidationError(
+                {
+                    'detail': ERROR_ALREADY_SUBSCRIBED.format(
+                        author=author.username
+                    )
+                }
+            )
         return Response(
-            serializers.SubscribedAuthorSerializer(
+            serializers.FollowedAuthorWithRecipesSerializer(
                 author, context={'request': request}
             ).data,
             status=status.HTTP_201_CREATED,
@@ -112,38 +116,10 @@ class UserViewSet(DjoserUserViewSet):
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, id=None):
-        # author = subscriptions.get_author_or_404(id)
-        self._unsubscribe(request.user, id)
-        return core.SUCCESS_DELETED_RESPONSE
-
-    def _subscribe(self, user, author):
-        """
-        Создает подписку на автора.
-        Возвращает:
-        - Subscription (успех)
-        - Поднимает исключение ValidationError (ошибка)
-        """
-        _, created = Subscription.objects.get_or_create(
-            user=user,
-            author=author,
-        )
-        if not created:
-            raise ValidationError(
-                core.format_error(
-                    core.ERROR_ALREADY_SUBSCRIBED, author=author.username
-                )
-            )
-
-    def _unsubscribe(self, user, author_id):
-        """Удаляет подписку на автора.
-        Возвращает:
-        - None (успех)
-        - Response (ошибка)
-        """
-
         get_object_or_404(
-            Subscription, user=user, author__id=author_id
+            Subscription, user=request.user, author__id=id
         ).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -168,9 +144,15 @@ class RecipesViewSet(ModelViewSet):
     @action(methods=['GET'], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
         if not Recipe.objects.filter(pk=pk).exists():
-            raise NotFound('Recipe not found.')
+            raise NotFound(f'Рецепт с кодом {pk} не найден.')
         return Response(
-            {'short-link': request.build_absolute_uri(f'/s/{pk}/')}
+            {
+                'short-link': request.build_absolute_uri(
+                    reverse(
+                        'recipes:short-link-view', kwargs={'recipe_id': pk}
+                    )
+                )
+            }
         )
 
     @action(
@@ -202,14 +184,18 @@ class RecipesViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        content, filename, content_type = build_shopping_cart_file(
-            user=request.user,
-            file_format=request.query_params.get(
-                'file_format', SHOPPING_CART_FORMAT
-            ),
+        content = sc.render_as_txt(
+            {
+                'ingredients': sc.get_shopping_cart_ingredients(request.user),
+                'recipes': sc.get_shopping_cart_recipes(request.user),
+            }
         )
-        response = HttpResponse(content, content_type=content_type)
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response = FileResponse(
+            content,
+            as_attachment=True,
+            content_type='text/plain;',
+            filename='shopping_cart.txt',
+        )
         return response
 
     def get_queryset(self):
@@ -241,18 +227,26 @@ class RecipesViewSet(ModelViewSet):
         self, request, recipe_id, serializer_class, relation_model
     ):
         if request.method == 'DELETE':
-            self._remove_recipe_relation(
+            get_object_or_404(
+                relation_model,
                 user=request.user,
                 recipe_id=recipe_id,
-                relation_model=relation_model,
-            )
-            return core.SUCCESS_DELETED_RESPONSE
+            ).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        recipe = self._add_recipe_relation(
-            user=request.user,
-            recipe_id=recipe_id,
-            relation_model=relation_model,
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
+        _, created = relation_model.objects.get_or_create(
+            user=request.user, recipe=recipe
         )
+        if not created:
+            raise ValidationError(
+                {
+                    'detail': ERROR_RECIPE_IN_LIST.format(
+                        recipe=recipe.name,
+                        list=relation_model._meta.verbose_name,
+                    )
+                }
+            )
         return Response(
             serializer_class(
                 recipe,
@@ -260,34 +254,3 @@ class RecipesViewSet(ModelViewSet):
             ).data,
             status=status.HTTP_201_CREATED,
         )
-
-    def _add_recipe_relation(self, *, user, recipe_id, relation_model):
-        """
-        Создать связь user<->recipe в relation_model (Favorite/ShoppingCart).
-        Возвращает:
-        - Recipe (успех)
-        - Поднимает исключение ValidationError (ошибка)
-        """
-        recipe = get_object_or_404(Recipe, pk=recipe_id)
-        _, created = relation_model.objects.get_or_create(
-            user=user, recipe=recipe
-        )
-        if not created:
-            raise ValidationError(
-                core.format_error(
-                    core.ERROR_RECIPE_IN_LIST,
-                    recipe=recipe.name,
-                    list=relation_model.__name__,
-                )
-            )
-        return recipe
-
-    def _remove_recipe_relation(self, *, user, recipe_id, relation_model):
-        """
-        Удалить связь user<->recipe из relation_model (Favorite/ShoppingCart).
-        Возвращает:
-        - None (успех)
-        - Поднимает исключение ValidationError (ошибка)
-        """
-        relation_model.objects.filter(user=user, recipe_id=recipe_id).delete()
-        return None

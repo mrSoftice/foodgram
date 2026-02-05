@@ -1,7 +1,8 @@
-from django.shortcuts import redirect
-from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404, redirect
+
+from recipes.models import Recipe
 
 
-class ShortLinkView(APIView):
-    def get(self, request, recipe_id):
-        return redirect(f'/recipes/{recipe_id}/')
+def short_link_view(request, recipe_id):
+    get_object_or_404(Recipe, id=recipe_id)
+    return redirect(f'/recipes/{recipe_id}/')

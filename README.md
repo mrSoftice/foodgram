@@ -157,4 +157,4 @@ python manage.py load_tags
 
 ## 5. Разработчики <a id=5></a>
 
-* [Гончаренко Денис](https://github.com/mrSoftice) (📧 email: [denis.goncharenko@yandex.com](mailto:denis.goncharenko@yandex.com))
+* [Гончаренко Денис](https://github.com/mrSoftice) (email: [denis.goncharenko@yandex.com](mailto:denis.goncharenko@yandex.com))

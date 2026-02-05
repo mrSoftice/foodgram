@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'recipes.apps.RecipesConfig',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -172,10 +173,5 @@ RECIPE_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 RECIPE_IMAGE_PATH = 'recipes/image'
 AVATAR_IMAGE_MAX_SIZE = 5 * 1024 * 1024
 AVATAR_IMAGE_PATH = 'users/'
-SHOPPING_CART_FILENAME = 'shopping_cart'
-SHOPPING_CART_FORMAT = 'txt'
-COOKING_TIME_MIN_VALUE = 1
-COOKING_TIME_FILTERS = (10, 30, 60)
-COOKING_TIME_LONG_LABEL = 'дольше'
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']

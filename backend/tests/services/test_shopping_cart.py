@@ -1,13 +1,8 @@
 ﻿import pytest
 from django.utils import timezone as tz
 
-from foodgram.settings import SHOPPING_CART_FILENAME
+import recipes.services.shopping_cart as sc
 from recipes.models import ShoppingCart
-from recipes.services.shopping_cart import (
-    build_shopping_cart_file,
-    get_shopping_cart_ingredients,
-    render_as_txt,
-)
 
 
 @pytest.mark.django_db
@@ -22,7 +17,7 @@ def test_get_shopping_cart_ingredients_aggregates_and_sorts(
     ShoppingCart.objects.create(user=author, recipe=recipe2)
     ShoppingCart.objects.create(user=user, recipe=other_recipe)
 
-    results = list(get_shopping_cart_ingredients(author))
+    results = list(sc.get_shopping_cart_ingredients(author))
 
     assert results == [
         {
@@ -48,10 +43,7 @@ def test_render_as_txt(recipe1, recipe2):
             {'name': 'Sugar', 'total_amount': 10, 'measurement_unit': 'g'},
             {'name': 'Salt', 'total_amount': 1, 'measurement_unit': 'g'},
         ],
-        'recipes': [
-            {'name': 'Recipe 1', 'author_name': 'User2'},
-            {'name': 'Recipe 2', 'author_name': 'User2'},
-        ],
+        'recipes': [recipe1, recipe2],
     }
     expected = '\n'.join(
         [
@@ -65,17 +57,17 @@ def test_render_as_txt(recipe1, recipe2):
             'Recipe 2 (автор: User2)',
         ]
     )
-    assert render_as_txt(data) == expected
+    assert sc.render_as_txt(data) == expected
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     'file_format, expected_content_type',
     [
-        ('txt', 'text/plain; charset=utf-8'),
+        ('txt', 'text/plain;'),
     ],
 )
-def test_build_shopping_cart_file_returns_content_filename_and_type(
+def test_build_shopping_cart_file_returns_content(
     file_format,
     expected_content_type,
     recipe1,
@@ -86,12 +78,12 @@ def test_build_shopping_cart_file_returns_content_filename_and_type(
     ShoppingCart.objects.create(user=author, recipe=recipe1)
     ShoppingCart.objects.create(user=author, recipe=recipe2)
 
-    content, filename, content_type = build_shopping_cart_file(
-        user=author,
-        file_format=file_format,
+    content = sc.render_as_txt(
+        {
+            'ingredients': sc.get_shopping_cart_ingredients(author),
+            'recipes': sc.get_shopping_cart_recipes(author),
+        }
     )
-    assert filename == f'{SHOPPING_CART_FILENAME}.{file_format}'
-    assert content_type == expected_content_type
 
     # Содержимое проверяем по формату
     header = f'Список покупок на {tz.localdate()}:'
@@ -106,8 +98,8 @@ def test_build_shopping_cart_file_returns_content_filename_and_type(
             '2 - Banana - 1 g',
             '',
             recipes_header,
-            'Recipe 1 (автор: user2)',
-            'Recipe 2 (автор: user2)',
+            'Recipe 1 (автор: User2)',
+            'Recipe 2 (автор: User2)',
         ]
 
 

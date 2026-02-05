@@ -28,16 +28,16 @@ class RecipeFilters(FilterSet):
         if user.is_anonymous:
             return queryset.none() if value == 1 else queryset
         if value == 1:
-            return queryset.filter(in_shoppingcarts__user=user)
-        return queryset.exclude(in_shoppingcarts__user=user)
+            return queryset.filter(shoppingcarts__user=user)
+        return queryset.exclude(shoppingcarts__user=user)
 
     def filter_is_favorited(self, queryset, name, value):
         user = self.request.user
         if user.is_anonymous:
             return queryset.none() if value == 1 else queryset
         if value == 1:
-            return queryset.filter(in_favorites__user=user)
-        return queryset.exclude(in_favorites__user=user)
+            return queryset.filter(favorites__user=user)
+        return queryset.exclude(favorites__user=user)
 
     class Meta:
         model = Recipe

@@ -16,7 +16,6 @@ class BaseImportCommand(BaseCommand):
 
     model = None
     filename_stem = None
-    unique_fields = ()
 
     help = (
         'Импортирует данные из файла json. '
@@ -31,42 +30,27 @@ class BaseImportCommand(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if (
-            self.model is None
-            or self.filename_stem is None
-            or not self.unique_fields
-        ):
+        try:
+            data_dir = Path(options['data_dir'])
+            file_path = data_dir / f'{self.filename_stem}.json'
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            created = self.model.objects.bulk_create(
+                [tuple(row[field] for field in row) for row in data],
+                ignore_conflicts=True,
+            )
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Файл {file_path}.\n'
+                    rf'Всего в файле {self.model.objects.count()}.\т'
+                    f'Загружено {len(created)} элементов.'
+                )
+            )
+        except Exception:
             raise RuntimeError(
                 'Неверные параметры: '
                 'установите model, filename_stem, unique_fields'
             )
-
-        data_dir = Path(options['data_dir'])
-        frmt = 'json'
-        file_path = data_dir / f'{self.filename_stem}.{frmt}'
-
-        created = self._load(file_path)
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Файл {file_path}.\n'
-                rf'Всего в файле {self.model.objects.count()}.\т'
-                f'Загружено {len(created)} элементов.'
-            )
-        )
-
-    def _load(self, filename: Path):
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        existing = set(self.model.objects.values_list(*self.unique_fields))
-
-        to_create = []
-        for row in data:
-            key = tuple(row[field] for field in self.unique_fields)
-            if key in existing:
-                continue
-            to_create.append(self.model(**row))
-            existing.add(key)
-
-        return self.model.objects.bulk_create(to_create)
