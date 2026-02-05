@@ -9,7 +9,9 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v5
       - name: Print tree
-        run: tree .
+        run: |
+          apt-get update && apt-get install -y tree
+          tree backend/
       - name: Upload workspace
         uses: actions/upload-artifact@v4
         with:
@@ -28,12 +30,12 @@ jobs:
           POSTGRES_USER: django_user
           POSTGRES_PASSWORD: django_password
           POSTGRES_DB: django_db
-        ports:
-          - 5432:5432
+          ports:
+            - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
-          --health-timeout 5s
+          --health-timeout 10s
           --health-retries 5
     steps:
       - name: Download workspace
@@ -62,8 +64,10 @@ jobs:
           POSTGRES_DB: django_db
           DB_HOST: localhost
           DB_PORT: 5432
+          CSRF_TRUSTED: "http://localhost,http://127.0.0.1"
         run: |
           cd backend/
+          python manage.py migrate
           pytest
 
   build_backend_and_push_to_docker_hub:

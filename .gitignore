@@ -152,3 +152,7 @@ node_modules
 
 *.swp
 *.bak
+
+# Act files
+.actrc
+.secrets
