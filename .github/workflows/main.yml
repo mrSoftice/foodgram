@@ -64,6 +64,7 @@ jobs:
           POSTGRES_DB: django_db
           DB_HOST: postgres
           DB_PORT: 5432
+          CSRF_TRUSTED: "http://localhost,http://127.0.0.1"
         run: |
           cd backend/
           python manage.py migrate
