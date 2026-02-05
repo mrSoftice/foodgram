@@ -18,7 +18,10 @@ def username_validation(username):
 def no_repeating_elements_in_list(value, list_name='', field_name='id'):
     dublicate_ids = [
         id
-        for id, count in Counter(item[field_name] for item in value).items()
+        for id, count in Counter(
+            item[field_name] if isinstance(item, dict) else item
+            for item in value
+        ).items()
         if count > 1
     ]
     if dublicate_ids:

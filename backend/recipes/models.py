@@ -134,7 +134,7 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество',
-        validators=[MinValueValidator(const.COOKING_TIME_MIN_VALUE)],
+        validators=[MinValueValidator(const.INGREDIENT_MIN_AMOUNT)],
     )
 
     class Meta:

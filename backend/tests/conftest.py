@@ -13,7 +13,7 @@ User = get_user_model()
 @pytest.mark.django_db
 def user(django_user_model):
     return User.objects.create_user(
-        username='user1',
+        username='User1',
         email='user1@example.com',
         first_name='User',
         last_name='One',
@@ -25,7 +25,7 @@ def user(django_user_model):
 @pytest.mark.django_db
 def author(django_user_model):
     return User.objects.create_user(
-        username='user2',
+        username='User2',
         email='user2@example.com',
         first_name='User',
         last_name='Two',
