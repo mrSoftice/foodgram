@@ -219,9 +219,7 @@ class RecipesViewSet(ModelViewSet):
             return serializers.RecipeReadSerializer
         return serializers.RecipeWriteSerializer
 
-    def _manage_recipe_relation(
-        self, request, recipe_id, serializer_class, relation_model
-    ):
+    def _manage_recipe_relation(self, request, recipe_id, relation_model):
         if request.method == 'DELETE':
             get_object_or_404(
                 relation_model,
