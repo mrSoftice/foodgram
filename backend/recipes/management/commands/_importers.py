@@ -9,48 +9,40 @@ class BaseImportCommand(BaseCommand):
     Базовая команда импорта.
     Наследники задают только поля класса:
     - model
-    - filename_stem (например 'ingredients' или 'tags')
-    - unique_fields (кортеж полей уникальности)
-    - build_instance(row) -> объект модели
     """
 
     model = None
-    filename_stem = None
-
     help = (
         'Импортирует данные из файла json. '
-        'Параметры:  --data-dir (default: ./data)'
+        'Параметры:  --data-file (default: ./data/ingredients.json)'
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--data-dir',
-            default='./data',
+            '--data-file',
+            default='./data/ingredients.json',
             help='Каталог с файлами данных (по умолчанию ./data).',
         )
 
     def handle(self, *args, **options):
         try:
-            data_dir = Path(options['data_dir'])
-            file_path = data_dir / f'{self.filename_stem}.json'
+            file_path = Path(options['data_file'])
 
             with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            created = self.model.objects.bulk_create(
-                [tuple(row[field] for field in row) for row in data],
-                ignore_conflicts=True,
-            )
+                created = self.model.objects.bulk_create(
+                    (self.model(*row) for row in json.load(f)),
+                    ignore_conflicts=True,
+                )
 
             self.stdout.write(
                 self.style.SUCCESS(
                     f'Файл {file_path}.\n'
-                    rf'Всего в файле {self.model.objects.count()}.\т'
+                    rf'Всего в файле {self.model.objects.count()}.\n'
                     f'Загружено {len(created)} элементов.'
                 )
             )
-        except Exception:
+        except Exception as e:
             raise RuntimeError(
-                'Неверные параметры: '
-                'установите model, filename_stem, unique_fields'
-            )
+                f'Ошибка загрузки "{self.model._meta.verbose_name_plural}":\n'
+                f'Причина: {e}'
+            ) from e
