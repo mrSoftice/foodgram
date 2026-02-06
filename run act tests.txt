@@ -1,0 +1,1 @@
+act -j backend_tests --artifact-server-path $LOCALAPPDATA/temp/act --secret-file .secrets

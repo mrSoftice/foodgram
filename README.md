@@ -1,6 +1,8 @@
 # Проект Foodgram
 
-[![Foodgram Workflow](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml)
+[![CI/CD](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml)
+[![Backend tests](https://github.com/mrSoftice/foodgram/actions/workflows/django-tests.yml/badge.svg)](https://github.com/mrSoftice/foodgram/actions/workflows/django-tests.yml)
+![Ruff](https://img.shields.io/badge/lint-ruff-2d6cdf.svg)
 
 [Foodgram](https://softice.redirectme.net)
 
