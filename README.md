@@ -3,7 +3,8 @@
 [![CI/CD](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/mrSoftice/foodgram/actions/workflows/main.yml)
 [![Backend tests](https://github.com/mrSoftice/foodgram/actions/workflows/django-tests.yml/badge.svg)](https://github.com/mrSoftice/foodgram/actions/workflows/django-tests.yml)
 ![Ruff](https://img.shields.io/badge/lint-ruff-2d6cdf.svg)
-![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/mrSoftice/foodgram)
+![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/mrSoftice/foodgram%2Fbackend)
+
 
 [Foodgram](https://softice.redirectme.net)
 
