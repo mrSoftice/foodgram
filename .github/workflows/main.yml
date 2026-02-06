@@ -1,0 +1,214 @@
+
+name: Deploy to remote server
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checkout-and-print-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v5
+      - name: Print tree
+        run: |
+          apt-get update && apt-get install -y tree
+          tree backend/
+      - name: Upload workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace
+          path: ./
+
+  build_backend_and_push_to_docker_hub:
+    name: Push backend Docker image to DockerHub
+    needs: checkout-and-print-tree
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      # - name: Check out the repo
+        # Получение исходного кода из репозитория
+      - name: Download workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-backend:latest
+
+  build_frontend_and_push_to_docker_hub:
+    name: Push frontend Docker image to DockerHub
+    needs: checkout-and-print-tree
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-frontend:latest
+
+  build_gateway_and_push_to_docker_hub:
+    name: Push gateway Docker image to DockerHub
+    needs: checkout-and-print-tree
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./nginx/
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/foodgram-proxy:latest
+
+  deploy_backend_to_remote_server:
+    name: Deploy to remote server
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build_backend_and_push_to_docker_hub
+      - build_frontend_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+      - name: Check docs
+        run: ls -la docs && find docs -maxdepth 2 -type f -print
+      - name: Copy docs to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "./docs"
+          target: "foodgram"
+      - name: Copy docker-compose.production.yml to remote server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "infra/docker-compose.production.yml"
+          target: "foodgram"
+          strip_components: 1
+      - name: Copy collect_static_foodgram.sh to remote server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "infra/collect_static_foodgram.sh"
+          target: "foodgram"
+          strip_components: 1
+      - name: Execute remote scripts to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER_HOST }}
+          username: ${{ secrets.REMOTE_SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd foodgram
+            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml down
+            sudo docker compose -f docker-compose.production.yml up -d
+            sudo chmod +x collect_static_foodgram.sh
+            bash collect_static_foodgram.sh
+
+  send_message:
+    runs-on: ubuntu-latest
+    needs:
+      - deploy_backend_to_remote_server
+      - build_backend_and_push_to_docker_hub
+      - build_frontend_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    if: always()
+    steps:
+      - name: Build status message
+        id: build_msg
+        run: |
+          #!/bin/bash
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          run_url="https://github.com/${repo}/actions/runs/${GITHUB_RUN_ID}"
+
+          append() { printf "%s\n" "$1" >> /tmp/msg.txt; }
+
+          append "Репозиторий: ${repo}"
+          append "${{ github.actor }} сделал коммит ${{ github.event.commits[0].message }}"
+          append "Процесс: ${GITHUB_WORKFLOW}"
+          append "Запущен: ${run_url}"
+          append ""
+          append "Результаты:"
+          append "- build_backend_and_push_to_docker_hub: ${{ needs.build_backend_and_push_to_docker_hub.result }}"
+          append "- build_frontend_and_push_to_docker_hub: ${{ needs.build_frontend_and_push_to_docker_hub.result }}"
+          append "- build_gateway_and_push_to_docker_hub: ${{ needs.build_gateway_and_push_to_docker_hub.result }}"
+          append "- deploy_backend_to_remote_server: ${{ needs.deploy_backend_to_remote_server.result }}"
+          append ""
+
+          # Build list of failed jobs (job-level)
+          failed=""
+          if [[ "${{ needs.build_backend_and_push_to_docker_hub.result }}" != "success" ]]; then failed="${failed} backend"; fi
+          if [[ "${{ needs.build_frontend_and_push_to_docker_hub.result }}" != "success" ]]; then failed="${failed} frontend"; fi
+          if [[ "${{ needs.build_gateway_and_push_to_docker_hub.result }}" != "success" ]]; then failed="${failed} gateway"; fi
+          if [[ "${{ needs.deploy_backend_to_remote_server.result }}" != "success" ]]; then failed="${failed} deploy"; fi
+
+          if [[ -n "$failed" ]]; then
+            append "Ошибка на шаге: ${failed}"
+            append ""
+            append "Полный лог: ${run_url}"
+          else
+            append "Все шаги выполнены успешно."
+          fi
+
+          # expose message to next step
+          echo "message<<EOF" >> "$GITHUB_OUTPUT"
+          cat /tmp/msg.txt >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: send message to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.HOMEWORK_BOT_TOKEN }}
+          message: ${{ steps.build_msg.outputs.message }}
