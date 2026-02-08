@@ -36,7 +36,7 @@ def render_as_txt(data):
     recipes_header = 'Рецепты в вашем списке покупок:'
     products = [
         f'{num} - {item["name"].capitalize()} - ({item["measurement_unit"]})'
-        f' - {item["total_amount"]} '
+        f' - {item["total_amount"]}'
         for num, item in enumerate(data['ingredients'], start=1)
     ]
     recipes = [
