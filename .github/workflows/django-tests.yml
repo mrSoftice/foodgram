@@ -7,7 +7,7 @@ on:
     branches: [ "tests" ]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-latest
     strategy:
@@ -60,3 +60,52 @@ jobs:
         python manage.py migrate
         pytest
         # python manage.py test
+  send_message:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    if: always()
+    steps:
+      - name: Build status message
+        id: build_msg
+        run: |
+          #!/bin/bash
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          run_url="https://github.com/${repo}/actions/runs/${GITHUB_RUN_ID}"
+
+          append() { printf "%s\n" "$1" >> /tmp/msg.txt; }
+
+          append "Репозиторий: ${repo}"
+          append "${{ github.actor }} сделал коммит ${{ github.event.commits[0].message }}"
+          append "Процесс: ${GITHUB_WORKFLOW}"
+          append "Запущен: ${run_url}"
+          append ""
+          append "Результаты:"
+          append "- Test: ${{ needs.test.result }}"
+          append ""
+
+          # Build list of failed jobs (job-level)
+          failed=""
+          if [[ "${{ needs.test.result }}" != "success" ]]; then failed="${failed} backend"; fi
+
+          if [[ -n "$failed" ]]; then
+            append "Ошибка на шаге: ${failed}"
+            append ""
+            append "Полный лог: ${run_url}"
+          else
+            append "Все шаги выполнены успешно."
+          fi
+
+          # expose message to next step
+          echo "message<<EOF" >> "$GITHUB_OUTPUT"
+          cat /tmp/msg.txt >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: send message to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.HOMEWORK_BOT_TOKEN }}
+          message: ${{ steps.build_msg.outputs.message }}
