@@ -31,12 +31,12 @@ def get_shopping_cart_ingredients(user):
 
 def render_as_txt(data):
     """Форматирует список ингредиентов в текстовый файл"""
-    header = f'Список покупок на {tz.localdate()}:'
-    products_header = '№ - Наименование - Количество Единица измерения'
+    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
+    products_header = '№ - Наименование - Единица измерения - Количество '
     recipes_header = 'Рецепты в вашем списке покупок:'
     products = [
-        f'{num} - {item["name"].capitalize()} - '
-        f'{item["total_amount"]} {item["measurement_unit"]}'
+        f'{num} - {item["name"].capitalize()} - ({item["measurement_unit"]})'
+        f' - {item["total_amount"]} '
         for num, item in enumerate(data['ingredients'], start=1)
     ]
     recipes = [
