@@ -104,7 +104,7 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
-        related_name='recipes',
+        verbose_name='Ингредиенты',
     )
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления, мин',
@@ -114,7 +114,7 @@ class Recipe(models.Model):
         upload_to=RECIPE_IMAGE_PATH,
         verbose_name='Изображение',
     )
-    pub_date = models.DateField(
+    pub_date = models.DateTimeField(
         auto_now_add=True, verbose_name='Дата публикации'
     )
 
