@@ -30,7 +30,7 @@ class BaseImportCommand(BaseCommand):
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 created = self.model.objects.bulk_create(
-                    (self.model(*row) for row in json.load(f)),
+                    (self.model(**row) for row in json.load(f)),
                     ignore_conflicts=True,
                 )
 
