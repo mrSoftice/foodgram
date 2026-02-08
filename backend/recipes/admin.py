@@ -267,7 +267,24 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         'id',
         'email',
     )
-    readonly_fields = ('avatar_preview',)
+    readonly_fields = ('avatar_preview', 'avatar_image')
+
+    fieldsets = (
+        *UserAdmin.fieldsets,
+        ('Аватар', {'fields': ('avatar', 'avatar_image')}),
+    )
+
+    @mark_safe
+    @admin.display(description='')
+    def avatar_image(self, user):
+        if user.avatar:
+            return (
+                f'<a href="{user.avatar.url}" target="_blank" rel="noopener">'
+                f'<img src="{user.avatar.url}" style="max-height: 160px;'
+                f'object-fit:cover; border-radius: 12px;" />'
+                f'</a>'
+            )
+        return '-'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
