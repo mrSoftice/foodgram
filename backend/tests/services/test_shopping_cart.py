@@ -34,8 +34,8 @@ def test_get_shopping_cart_ingredients_aggregates_and_sorts(
 
 
 def test_render_as_txt(recipe1, recipe2):
-    header = f'Список покупок на {tz.localdate()}:'
-    products_header = '№ - Наименование - Количество Единица измерения'
+    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
+    products_header = '№ - Наименование - Единица измерения - Количество '
     recipes_header = 'Рецепты в вашем списке покупок:'
 
     data = {
@@ -49,8 +49,8 @@ def test_render_as_txt(recipe1, recipe2):
         [
             header,
             products_header,
-            '1 - Sugar - 10 g',
-            '2 - Salt - 1 g',
+            '1 - Sugar - (g) - 10',
+            '2 - Salt - (g) - 1',
             '',
             recipes_header,
             'Recipe 1 (автор: User2)',
@@ -87,15 +87,15 @@ def test_build_shopping_cart_file_returns_content(
 
     # Содержимое проверяем по формату
     header = f'Список покупок на {tz.localdate()}:'
-    products_header = '№ - Наименование - Количество Единица измерения'
+    products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
 
     if file_format == 'txt':
         assert content.splitlines() == [
             header,
             products_header,
-            '1 - Apple - 150 g',
-            '2 - Banana - 1 g',
+            '1 - Apple - (g) - 150',
+            '2 - Banana - (g) - 1',
             '',
             recipes_header,
             'Recipe 1 (автор: User2)',
