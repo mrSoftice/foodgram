@@ -3,8 +3,7 @@ name: Backend tests
 on:
   push:
     branches: [ "tests" ]
-  pull_request:
-    branches: [ "tests" ]
+  workflow_dispatch:
 
 jobs:
   test:

@@ -1,8 +1,6 @@
 name: Lint backend
 
 on:
-  # push:
-  #   branches: [ "main", "tests" ]
   pull_request:
     branches: [ "main", "tests" ]
 
