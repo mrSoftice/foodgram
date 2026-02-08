@@ -55,6 +55,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+__pycache__/
+*.pyc
 
 # Translations
 *.mo
@@ -146,6 +148,8 @@ frontend/node_modules
 
 # production
 /build
+tests
+backend/tests
 
 # Others
 node_modules

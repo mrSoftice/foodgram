@@ -69,7 +69,7 @@ def test_link_connection(
     response = _make_safe_request(link)
     project_name = 'Foodgram'
     assert_msg_template = (
-        f'Убедитесь, что по ссылке `{link}` доступен проект `{{project_name}}`.'
+        f'Убедитесь, что по ссылке `{link}` доступен проект `{{project_name}}`'
     )
 
     assert_msg = assert_msg_template.format(project_name=project_name)
