@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -15,6 +16,8 @@ from recipes.models import (
     Tag,
     User,
 )
+
+admin.site.unregister(Group)
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
@@ -303,7 +306,6 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
     @admin.display(description='Подписок', ordering='subscriptions_total')
     def subscriptions_count(self, user):
         return self._subscription_changelist_link(
-            label='Подписок',
             filter_key='user__id__exact',  # user = obj (на кого подписан)
             user_id=user.id,
             value=user.subscriptions_total,
@@ -312,7 +314,6 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
     @admin.display(description='Подписчиков', ordering='subscribers_total')
     def subscribers_count(self, user):
         return self._subscription_changelist_link(
-            label='Подписчиков',
             filter_key='author__id__exact',  # author = obj (кто подписан)
             user_id=user.id,
             value=user.subscribers_total,
