@@ -35,7 +35,7 @@ def test_get_shopping_cart_ingredients_aggregates_and_sorts(
 
 def test_render_as_txt(recipe1, recipe2):
     header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
-    products_header = '№ - Наименование - Единица измерения - Количество '
+    products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
 
     data = {
@@ -86,7 +86,7 @@ def test_build_shopping_cart_file_returns_content(
     )
 
     # Содержимое проверяем по формату
-    header = f'Список покупок на {tz.localdate()}:'
+    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
     products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
 
