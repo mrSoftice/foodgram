@@ -212,7 +212,7 @@ class RecipesViewSet(ModelViewSet):
                     )
                 ),
             )
-        return queryset
+        return queryset.order_by('-pub_date')
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
