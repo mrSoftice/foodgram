@@ -88,15 +88,12 @@ class YesNoFilter(admin.SimpleListFilter):
 class HasRecipesFilter(YesNoFilter):
     title = 'Есть рецепты'
     parameter_name = 'has_recipes'
-
     filter_field = 'recipes_count'
 
 
 class IsInRecipesFilter(YesNoFilter):
     title = 'Есть в рецептах'
     parameter_name = 'is_in_recipes'
-    lookup_choices = (('1', 'да'), ('0', 'нет'))
-
     filter_field = 'recipes_count'
 
 
@@ -121,7 +118,7 @@ class RecipesCountAdminMixin:
         return (
             super()
             .get_queryset(request)
-            .annotate(**{'recipes_count': Count('recipes', distinct=True)})
+            .annotate(recipes_count=Count('recipes', distinct=True))
         )
 
     @admin.display(description='рецептов')
@@ -172,6 +169,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'ingredients_list',
         'image_preview',
         'favorites_count',
+        'pub_date',
     )
     list_display_links = (
         'name',
@@ -189,7 +187,10 @@ class RecipeAdmin(admin.ModelAdmin):
         CookingTimeFilter,
     )
     filter_horizontal = ('tags',)
-    readonly_fields = ('favorites_count',)
+    readonly_fields = (
+        'favorites_count',
+        'pub_date',
+    )
 
     inlines = (RecipeIngredientInline,)
 
@@ -212,7 +213,14 @@ class RecipeAdmin(admin.ModelAdmin):
     @mark_safe
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
-        return '<br>'.join(recipe.ingredients.values_list('name', flat=True))
+        return (
+            '<br>'.join(
+                f'{ri.ingredient.name} ({ri.ingredient.measurement_unit})'
+                f' - {ri.amount}'
+                for ri in recipe.ingredients_amounts.all()
+            )
+            or '-'
+        )
 
     @mark_safe
     @admin.display(description='Теги')
@@ -223,7 +231,7 @@ class RecipeAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return (
             qs.select_related('author')
-            .prefetch_related('tags')
+            .prefetch_related('tags', 'ingredients_amounts__ingredient')
             .annotate(favorites_total=Count('favorites', distinct=True))
         )
 
