@@ -60,6 +60,28 @@ class CookingTimeFilter(admin.SimpleListFilter):
         return recipes
 
 
+class AuthorUsernameFilter(admin.SimpleListFilter):
+    title = 'Автор'
+    parameter_name = 'author'
+
+    def lookups(self, request, model_admin):
+        qs = model_admin.get_queryset(request)
+
+        return tuple(
+            (str(author_id), username)
+            for author_id, username in (
+                qs.values_list('author_id', 'author__username')
+                .distinct()
+                .order_by('author__username')
+            )
+        )
+
+    def queryset(self, request, authors):
+        if self.value():
+            return authors.filter(author_id=self.value())
+        return authors
+
+
 class YesNoFilter(admin.SimpleListFilter):
     title = None
     parameter_name = None
@@ -166,13 +188,12 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'cooking_time',
-        'author',
+        'cooking_time_in_list',
+        'author_username',
         'tags_list',
         'ingredients_list',
         'image_preview',
         'favorites_count',
-        'pub_date',
     )
     list_display_links = (
         'name',
@@ -186,7 +207,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'tags',
-        ('author', admin.RelatedOnlyFieldListFilter),
+        AuthorUsernameFilter,
         CookingTimeFilter,
     )
     filter_horizontal = ('tags',)
@@ -213,6 +234,12 @@ class RecipeAdmin(admin.ModelAdmin):
             )
         return '-'
 
+    @admin.display(
+        description=mark_safe('Время<br>(мин)'), ordering='cooking_time'
+    )
+    def cooking_time_in_list(self, recipe):
+        return recipe.cooking_time
+
     @mark_safe
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
@@ -229,6 +256,10 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Теги')
     def tags_list(self, recipe):
         return '<br>'.join(recipe.tags.values_list('name', flat=True))
+
+    @admin.display(description='Автор', ordering='author__username')
+    def author_username(self, recipe):
+        return recipe.author.username
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
