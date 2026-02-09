@@ -211,8 +211,8 @@ class RecipesViewSet(ModelViewSet):
                         user=user, recipe=OuterRef('pk')
                     )
                 ),
-            )
-        return queryset.order_by('-pub_date')
+            ).order_by(*Recipe._meta.ordering)
+        return queryset
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
