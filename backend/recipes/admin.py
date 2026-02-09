@@ -214,8 +214,23 @@ class RecipeAdmin(admin.ModelAdmin):
     readonly_fields = (
         'favorites_count',
         'pub_date',
+        'image_preview_form',
     )
-
+    fieldsets = (
+        (None, {'fields': ('author', 'name', 'text', 'tags', 'cooking_time')}),
+        (
+            'Изображение',
+            {
+                'fields': (('image_preview_form', 'image'),),
+            },
+        ),
+        (
+            'Статистика',
+            {
+                'fields': ('favorites_count', 'pub_date'),
+            },
+        ),
+    )
     inlines = (RecipeIngredientInline,)
 
     @admin.display(description='В избранном')
@@ -233,6 +248,17 @@ class RecipeAdmin(admin.ModelAdmin):
                 f'</a>'
             )
         return '-'
+
+    @mark_safe
+    @admin.display(description='')
+    def image_preview_form(self, recipe):
+        if not recipe or not recipe.image:
+            return '—'
+        return (
+            f'<a href="{recipe.image.url}" target="_blank" rel="noopener">'
+            f'<img src="{recipe.image.url}" style="max-height:220px;'
+            f'max-width:220px;object-fit:contain; border-radius:10px;"/></a>'
+        )
 
     @admin.display(
         description=mark_safe('Время<br>(мин)'), ordering='cooking_time'
