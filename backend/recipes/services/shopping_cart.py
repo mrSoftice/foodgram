@@ -1,5 +1,6 @@
 from django.db.models import F, Sum
 from django.utils import timezone as tz
+from django.utils.formats import date_format
 
 from recipes.models import Recipe, RecipeIngredient
 
@@ -31,7 +32,9 @@ def get_shopping_cart_ingredients(user):
 
 def render_as_txt(data):
     """Форматирует список ингредиентов в текстовый файл"""
-    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
+    header = (
+        f'Список покупок на {date_format(tz.localdate(), format="d E Y")}:'
+    )
     products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
     products = [

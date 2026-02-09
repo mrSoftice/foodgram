@@ -34,6 +34,7 @@ class User(AbstractUser):
         null=False,
     )
     avatar = models.ImageField(
+        'Аватар',
         upload_to=settings.AVATAR_IMAGE_PATH,
         null=True,
         blank=True,
@@ -138,7 +139,7 @@ class RecipeIngredient(models.Model):
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
-        verbose_name_plural = 'Ингредиенты в рецептах'
+        verbose_name_plural = 'Ингредиенты в рецепте'
         default_related_name = 'ingredients_amounts'
         constraints = [
             models.UniqueConstraint(

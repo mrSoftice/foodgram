@@ -208,7 +208,7 @@ class AuthorWithRecipesSerializer(UserSerializer):
             'recipes',
         )
 
-    def get_recipes(self, obj):
+    def get_recipes(self, author):
         recipes_limit = self.context.get('request').GET.get(
             'recipes_limit', 10**10
         )
@@ -216,7 +216,14 @@ class AuthorWithRecipesSerializer(UserSerializer):
             limit = int(recipes_limit)
         except (TypeError, ValueError):
             raise serializers.ValidationError(
-                {'recipes_limit': 'recipes_limit должен быть целым числом.'}
+                {
+                    'recipes_limit': (
+                        f'Ошибка. В recipes_limit передано значение '
+                        f'"{recipes_limit}". Ожидается целое число.'
+                    )
+                }
             )
 
-        return RecipeShortSerializer(obj.recipes.all()[:limit], many=True).data
+        return RecipeShortSerializer(
+            author.recipes.all()[:limit], many=True
+        ).data

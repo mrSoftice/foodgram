@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -15,6 +16,8 @@ from recipes.models import (
     Tag,
     User,
 )
+
+admin.site.unregister(Group)
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
@@ -55,6 +58,28 @@ class CookingTimeFilter(admin.SimpleListFilter):
                 cooking_time__range=self.filter_expressions[self.value()]
             )
         return recipes
+
+
+class AuthorUsernameFilter(admin.SimpleListFilter):
+    title = 'Автор'
+    parameter_name = 'author'
+
+    def lookups(self, request, model_admin):
+        qs = model_admin.get_queryset(request)
+
+        return tuple(
+            (str(author_id), username)
+            for author_id, username in (
+                qs.values_list('author_id', 'author__username')
+                .distinct()
+                .order_by('author__username')
+            )
+        )
+
+    def queryset(self, request, authors):
+        if self.value():
+            return authors.filter(author_id=self.value())
+        return authors
 
 
 class YesNoFilter(admin.SimpleListFilter):
@@ -163,13 +188,12 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'cooking_time',
-        'author',
+        'cooking_time_in_list',
+        'author_username',
         'tags_list',
         'ingredients_list',
         'image_preview',
         'favorites_count',
-        'pub_date',
     )
     list_display_links = (
         'name',
@@ -183,15 +207,30 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'tags',
-        ('author', admin.RelatedOnlyFieldListFilter),
+        AuthorUsernameFilter,
         CookingTimeFilter,
     )
     filter_horizontal = ('tags',)
     readonly_fields = (
         'favorites_count',
         'pub_date',
+        'image_preview_form',
     )
-
+    fieldsets = (
+        (None, {'fields': ('author', 'name', 'text', 'tags', 'cooking_time')}),
+        (
+            'Изображение',
+            {
+                'fields': (('image_preview_form', 'image'),),
+            },
+        ),
+        (
+            'Статистика',
+            {
+                'fields': ('favorites_count', 'pub_date'),
+            },
+        ),
+    )
     inlines = (RecipeIngredientInline,)
 
     @admin.display(description='В избранном')
@@ -211,6 +250,23 @@ class RecipeAdmin(admin.ModelAdmin):
         return '-'
 
     @mark_safe
+    @admin.display(description='')
+    def image_preview_form(self, recipe):
+        if not recipe or not recipe.image:
+            return '—'
+        return (
+            f'<a href="{recipe.image.url}" target="_blank" rel="noopener">'
+            f'<img src="{recipe.image.url}" style="max-height:220px;'
+            f'max-width:220px;object-fit:contain; border-radius:10px;"/></a>'
+        )
+
+    @admin.display(
+        description=mark_safe('Время<br>(мин)'), ordering='cooking_time'
+    )
+    def cooking_time_in_list(self, recipe):
+        return recipe.cooking_time
+
+    @mark_safe
     @admin.display(description='Ингредиенты')
     def ingredients_list(self, recipe):
         return (
@@ -226,6 +282,10 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Теги')
     def tags_list(self, recipe):
         return '<br>'.join(recipe.tags.values_list('name', flat=True))
+
+    @admin.display(description='Автор', ordering='author__username')
+    def author_username(self, recipe):
+        return recipe.author.username
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -264,7 +324,24 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
         'id',
         'email',
     )
-    readonly_fields = ('avatar_preview',)
+    readonly_fields = ('avatar_preview', 'avatar_image')
+
+    fieldsets = (
+        *UserAdmin.fieldsets,
+        ('Аватар', {'fields': ('avatar', 'avatar_image')}),
+    )
+
+    @mark_safe
+    @admin.display(description='')
+    def avatar_image(self, user):
+        if user.avatar:
+            return (
+                f'<a href="{user.avatar.url}" target="_blank" rel="noopener">'
+                f'<img src="{user.avatar.url}" style="max-height: 160px;'
+                f'object-fit:cover; border-radius: 12px;" />'
+                f'</a>'
+            )
+        return '-'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -303,7 +380,7 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
     @admin.display(description='Подписок', ordering='subscriptions_total')
     def subscriptions_count(self, user):
         return self._subscription_changelist_link(
-            label='Подписок',
+            label='',
             filter_key='user__id__exact',  # user = obj (на кого подписан)
             user_id=user.id,
             value=user.subscriptions_total,
@@ -312,7 +389,7 @@ class UserAdmin(RecipesCountAdminMixin, UserAdmin):
     @admin.display(description='Подписчиков', ordering='subscribers_total')
     def subscribers_count(self, user):
         return self._subscription_changelist_link(
-            label='Подписчиков',
+            label='',
             filter_key='author__id__exact',  # author = obj (кто подписан)
             user_id=user.id,
             value=user.subscribers_total,
