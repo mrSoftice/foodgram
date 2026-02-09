@@ -3,8 +3,7 @@ name: Deploy to remote server
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-main
@@ -61,7 +60,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Check out the repo
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: workspace
       - name: Set up Docker Buildx
