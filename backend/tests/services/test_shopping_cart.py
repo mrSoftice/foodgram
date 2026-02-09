@@ -1,5 +1,6 @@
 ﻿import pytest
 from django.utils import timezone as tz
+from django.utils.formats import date_format
 
 import recipes.services.shopping_cart as sc
 from recipes.models import ShoppingCart
@@ -34,7 +35,9 @@ def test_get_shopping_cart_ingredients_aggregates_and_sorts(
 
 
 def test_render_as_txt(recipe1, recipe2):
-    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
+    header = (
+        f'Список покупок на {date_format(tz.localdate(), format="d E Y")}:'
+    )
     products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
 
@@ -86,7 +89,9 @@ def test_build_shopping_cart_file_returns_content(
     )
 
     # Содержимое проверяем по формату
-    header = f'Список покупок на {tz.localdate().strftime("%d %B %Y")}:'
+    header = (
+        f'Список покупок на {date_format(tz.localdate(), format="d E Y")}:'
+    )
     products_header = '№ - Наименование - Единица измерения - Количество'
     recipes_header = 'Рецепты в вашем списке покупок:'
 
